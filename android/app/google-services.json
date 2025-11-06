@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "692565819169",
+    "project_id": "gestao-estacionamentos-app",
+    "storage_bucket": "gestao-estacionamentos-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:692565819169:android:9c7862faf5b80834f30860",
+        "android_client_info": {
+          "package_name": "com.example.gestao_estacionamentos"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "692565819169-h3uql9uopr78susntn56fsm01lvke1cv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDARcfXvckAlOel553xyAsCqa1v2tOS5J0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "692565819169-h3uql9uopr78susntn56fsm01lvke1cv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
