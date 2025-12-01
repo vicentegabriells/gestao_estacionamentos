@@ -7,6 +7,7 @@ import 'login_screen.dart'; // Para poder voltar ao login ao sair
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importe isto no topo do arquivo!
 import 'dart:async'; // Importe para usar o Completer
 import 'parking_details_screen.dart';
+import 'my_reservations_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
