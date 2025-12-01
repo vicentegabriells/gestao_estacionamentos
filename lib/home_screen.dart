@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart'; // Para poder voltar ao login ao sair
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importe isto no topo do arquivo!
 import 'dart:async'; // Importe para usar o Completer
+import 'parking_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -109,8 +110,15 @@ class _MapTabState extends State<MapTab> {
               title: dados['nome'] ?? 'Estacionamento', // Mostra o nome ao clicar
               snippet: dados['endereco'] ?? '', // Mostra o endereço
               onTap: () {
-                // AQUI: Futuramente vamos abrir a tela de detalhes/reserva
-                print("Clicou no estacionamento: ${dados['nome']}");
+                // --- CÓDIGO NOVO AQUI ---
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ParkingDetailsScreen(
+                      estacionamentoId: doc.id,
+                      dadosEstacionamento: dados,
+                    ),
+                  ),
+                );
               },
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // Cor do pino
