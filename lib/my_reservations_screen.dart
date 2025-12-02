@@ -67,7 +67,7 @@ class MyReservationsScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('reservas')
             .where('usuarioId', isEqualTo: userId)
-            .orderBy('dataHoraInicio', descending: true) // Mais recentes primeiro
+            //.orderBy('dataHoraInicio', descending: true) // Mais recentes primeiro
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text('Erro ao carregar reservas.'));

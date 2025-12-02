@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // <--- Importante para pegar o ID do usuário
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ParkingDetailsScreen extends StatelessWidget {
   final String estacionamentoId;
@@ -12,9 +13,36 @@ class ParkingDetailsScreen extends StatelessWidget {
     required this.dadosEstacionamento,
   });
 
+  // Função para abrir o GPS externo
+  Future<void> _abrirMapa(BuildContext context) async {
+    GeoPoint? ponto = dadosEstacionamento['localizacao'];
+
+    if (ponto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Localização não disponível.")),
+      );
+      return;
+    }
+
+    final double lat = ponto.latitude;
+    final double lng = ponto.longitude;
+
+    final Uri googleMapsUrl = Uri.parse("google.navigation:q=$lat,$lng&mode=d");
+
+    if (!await launchUrl(googleMapsUrl)) {
+      final Uri webUrl = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+      if (!await launchUrl(webUrl, mode: LaunchMode.externalApplication)) {
+         if (context.mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text("Não foi possível abrir o mapa.")),
+           );
+         }
+      }
+    }
+  }
+
   // Função para realizar a reserva
   Future<void> _confirmarReserva(BuildContext context, String vagaId, String nomeVaga) async {
-    // 1. Pergunta se o usuário tem certeza
     bool? confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -33,13 +61,11 @@ class ParkingDetailsScreen extends StatelessWidget {
       ),
     );
 
-    // Se o usuário cancelou ou clicou fora, paramos aqui
     if (confirmar != true) return;
 
     try {
       String userId = FirebaseAuth.instance.currentUser!.uid;
 
-      // 2. Atualiza o status da vaga para 'reservada'
       await FirebaseFirestore.instance
           .collection('estacionamentos')
           .doc(estacionamentoId)
@@ -47,10 +73,9 @@ class ParkingDetailsScreen extends StatelessWidget {
           .doc(vagaId)
           .update({
         'status': 'reservada',
-        'reservadaPor': userId, // Vincula a vaga ao usuário
+        'reservadaPor': userId,
       });
 
-      // 3. Cria um registro no histórico de reservas (Coleção 'reservas')
       await FirebaseFirestore.instance.collection('reservas').add({
         'usuarioId': userId,
         'estacionamentoId': estacionamentoId,
@@ -90,6 +115,7 @@ class ParkingDetailsScreen extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- CABEÇALHO (CORRIGIDO) ---
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.blue[50],
@@ -102,9 +128,26 @@ class ParkingDetailsScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 const Text("Regras:", style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(dadosEstacionamento['regras'] ?? 'Sem regras cadastradas'),
+
+                const SizedBox(height: 15),
+
+                // Botão de Navegar (Agora dentro da lista children corretamente)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _abrirMapa(context),
+                    icon: const Icon(Icons.directions, color: Colors.white),
+                    label: const Text("Traçar Rota até Aqui"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
+          
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text(
@@ -139,7 +182,6 @@ class ParkingDetailsScreen extends StatelessWidget {
                     String nomeVaga = dadosVaga['identificador'] ?? 'Vaga ${index + 1}';
                     String tipo = dadosVaga['tipo'] ?? 'carro';
 
-                    // Cores e ícones
                     Color corStatus = Colors.grey;
                     IconData icone = tipo == 'moto' ? Icons.motorcycle : Icons.directions_car;
                     
@@ -151,7 +193,6 @@ class ParkingDetailsScreen extends StatelessWidget {
                       corStatus = Colors.orange;
                     }
 
-                    // Verifica se a vaga reservada é DO PRÓPRIO usuário atual
                     String? reservadaPor = dadosVaga['reservadaPor'];
                     String meuId = FirebaseAuth.instance.currentUser?.uid ?? '';
                     bool isMinhaReserva = (status == 'reservada' && reservadaPor == meuId);
@@ -163,8 +204,6 @@ class ParkingDetailsScreen extends StatelessWidget {
                         title: Text(nomeVaga, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(isMinhaReserva ? "RESERVADA POR VOCÊ" : "Status: ${status.toUpperCase()}"),
                         trailing: Icon(Icons.touch_app, color: status == 'livre' ? Colors.blue : Colors.grey),
-                        
-                        // Só permite clicar se estiver LIVRE
                         onTap: status == 'livre'
                             ? () => _confirmarReserva(context, vaga.id, nomeVaga)
                             : () {
