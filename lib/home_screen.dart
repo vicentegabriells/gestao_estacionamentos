@@ -216,6 +216,27 @@ class ProfileTab extends StatelessWidget {
               user?.uid ?? '-',
               style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
+            
+            const SizedBox(height: 30), // Espaço
+
+            // --- NOVO BOTÃO AQUI ---
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const MyReservationsScreen()),
+                  );
+                },
+                icon: const Icon(Icons.list_alt),
+                label: const Text('Minhas Reservas'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
             const Spacer(),
             
             // Botão de Sair (Logout)
