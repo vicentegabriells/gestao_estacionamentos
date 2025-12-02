@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class MyReservationsScreen extends StatelessWidget {
   const MyReservationsScreen({super.key});
 
-  // Função para cancelar a reserva
+  // Função para CANCELAR (Mantida igual)
   Future<void> _cancelarReserva(BuildContext context, String reservaId, String estacionamentoId, String vagaId) async {
     bool? confirmar = await showDialog<bool>(
       context: context,
@@ -22,29 +22,111 @@ class MyReservationsScreen extends StatelessWidget {
     if (confirmar != true) return;
 
     try {
-      await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({
-        'status': 'cancelada',
-      });
-
-      await FirebaseFirestore.instance
-          .collection('estacionamentos')
-          .doc(estacionamentoId)
-          .collection('vagas')
-          .doc(vagaId)
-          .update({
+      await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({'status': 'cancelada'});
+      await FirebaseFirestore.instance.collection('estacionamentos').doc(estacionamentoId).collection('vagas').doc(vagaId).update({
         'status': 'livre',
         'reservadaPor': FieldValue.delete(),
       });
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Reserva cancelada.")),
-        );
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva cancelada.")));
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+    }
+  }
+
+  // --- NOVA FUNÇÃO: EDITAR RESERVA ---
+  Future<void> _editarReserva(BuildContext context, DocumentSnapshot docReserva) async {
+    var dados = docReserva.data() as Map<String, dynamic>;
+    
+    // Recupera os dados atuais para preencher o calendário
+    Timestamp inicioAtualTs = dados['timestampInicio'] ?? Timestamp.now();
+    DateTime dataAtual = inicioAtualTs.toDate();
+    TimeOfDay entradaAtual = TimeOfDay.fromDateTime(dataAtual);
+    
+    Timestamp fimAtualTs = dados['timestampFim'] ?? Timestamp.now();
+    TimeOfDay saidaAtual = TimeOfDay.fromDateTime(fimAtualTs.toDate());
+
+    DateTime agora = DateTime.now();
+
+    // 1. SELETORES (Já iniciam com a data da reserva)
+    DateTime? novaData = await showDatePicker(
+      context: context,
+      initialDate: dataAtual.isBefore(agora) ? agora : dataAtual, // Se for antiga, põe hoje
+      firstDate: agora,
+      lastDate: agora.add(const Duration(days: 30)),
+      helpText: "EDITAR DATA",
+    );
+    if (novaData == null || !context.mounted) return;
+
+    TimeOfDay? novaEntrada = await showTimePicker(
+      context: context,
+      initialTime: entradaAtual,
+      helpText: "NOVA CHEGADA",
+    );
+    if (novaEntrada == null || !context.mounted) return;
+
+    TimeOfDay? novaSaida = await showTimePicker(
+      context: context,
+      initialTime: saidaAtual,
+      helpText: "NOVA SAÍDA",
+    );
+    if (novaSaida == null || !context.mounted) return;
+
+    // 2. MONTAR NOVOS DATETIMES
+    final DateTime novoInicio = DateTime(novaData.year, novaData.month, novaData.day, novaEntrada.hour, novaEntrada.minute);
+    final DateTime novoFim = DateTime(novaData.year, novaData.month, novaData.day, novaSaida.hour, novaSaida.minute);
+
+    if (novoFim.isBefore(novoInicio)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saída deve ser depois da entrada!"), backgroundColor: Colors.red));
+      return;
+    }
+
+    // 3. VERIFICAR CONFLITOS (Ignorando a própria reserva!)
+    try {
+      String estacionamentoId = dados['estacionamentoId'];
+      String vagaId = dados['vagaId'];
+
+      QuerySnapshot conflitos = await FirebaseFirestore.instance
+          .collection('reservas')
+          .where('estacionamentoId', isEqualTo: estacionamentoId)
+          .where('vagaId', isEqualTo: vagaId)
+          .where('status', isEqualTo: 'ativa')
+          .get();
+
+      bool temConflito = false;
+      for (var doc in conflitos.docs) {
+        // PULO DO GATO: Se for a mesma reserva que estou editando, ignora!
+        if (doc.id == docReserva.id) continue; 
+
+        var d = doc.data() as Map<String, dynamic>;
+        Timestamp? i = d['timestampInicio'];
+        Timestamp? f = d['timestampFim'];
+
+        if (i != null && f != null) {
+          if (novoInicio.isBefore(f.toDate()) && novoFim.isAfter(i.toDate())) {
+            temConflito = true;
+            break;
+          }
+        }
       }
+
+      if (temConflito) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Horário indisponível!"), backgroundColor: Colors.orange));
+        return;
+      }
+
+      // 4. ATUALIZAR NO FIREBASE
+      await FirebaseFirestore.instance.collection('reservas').doc(docReserva.id).update({
+        'timestampInicio': Timestamp.fromDate(novoInicio),
+        'timestampFim': Timestamp.fromDate(novoFim),
+        'agendamentoData': "${novaData.day}/${novaData.month}/${novaData.year}",
+        'agendamentoEntrada': "${novaEntrada.hour}:${novaEntrada.minute.toString().padLeft(2, '0')}",
+        'agendamentoSaida': "${novaSaida.hour}:${novaSaida.minute.toString().padLeft(2, '0')}",
+      });
+
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva atualizada!"), backgroundColor: Colors.green));
+
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
     }
   }
 
@@ -76,33 +158,24 @@ class MyReservationsScreen extends StatelessWidget {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.hasError) return Center(child: Text('Erro: ${snapshot.error}'));
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
             var todasReservas = snapshot.data!.docs;
-
             List<DocumentSnapshot> listaAtivas = [];
             List<DocumentSnapshot> listaHistorico = [];
             DateTime agora = DateTime.now();
 
-            // 1. SEPARAÇÃO
             for (var doc in todasReservas) {
               var dados = doc.data() as Map<String, dynamic>;
               String status = dados['status'] ?? 'ativa';
-              
-              // Tenta pegar a data de fim. Se for nula, assume futuro para não quebrar.
               Timestamp? fimTs = dados['timestampFim'];
               bool jaPassou = false;
               
               if (fimTs != null) {
                 jaPassou = fimTs.toDate().isBefore(agora);
               } else {
-                 // Se não tem data de fim (reserva antiga), usa data de criação + 24h
                  Timestamp? criacao = dados['dataHoraInicio'];
-                 if (criacao != null) {
-                   jaPassou = criacao.toDate().add(const Duration(hours: 24)).isBefore(agora);
-                 }
+                 if (criacao != null) jaPassou = criacao.toDate().add(const Duration(hours: 24)).isBefore(agora);
               }
 
               if (status == 'cancelada' || status == 'concluida' || jaPassou) {
@@ -112,35 +185,26 @@ class MyReservationsScreen extends StatelessWidget {
               }
             }
 
-            // 2. ORDENAÇÃO SEGURA (SORT)
-            
-            // Lista PENDENTES: Crescente
             listaAtivas.sort((a, b) {
-              var dadosA = a.data() as Map<String, dynamic>;
-              var dadosB = b.data() as Map<String, dynamic>;
-              
-              // Pega a data ou usa 'agora' como fallback se for nulo
-              Timestamp tA = dadosA['timestampInicio'] ?? dadosA['dataHoraInicio'] ?? Timestamp.now();
-              Timestamp tB = dadosB['timestampInicio'] ?? dadosB['dataHoraInicio'] ?? Timestamp.now();
-              
+              var dA = a.data() as Map<String, dynamic>;
+              var dB = b.data() as Map<String, dynamic>;
+              Timestamp tA = dA['timestampInicio'] ?? dA['dataHoraInicio'] ?? Timestamp.now();
+              Timestamp tB = dB['timestampInicio'] ?? dB['dataHoraInicio'] ?? Timestamp.now();
               return tA.compareTo(tB);
             });
 
-            // Lista HISTÓRICO: Decrescente
             listaHistorico.sort((a, b) {
-              var dadosA = a.data() as Map<String, dynamic>;
-              var dadosB = b.data() as Map<String, dynamic>;
-              
-              Timestamp tA = dadosA['timestampInicio'] ?? dadosA['dataHoraInicio'] ?? Timestamp.now();
-              Timestamp tB = dadosB['timestampInicio'] ?? dadosB['dataHoraInicio'] ?? Timestamp.now();
-              
+              var dA = a.data() as Map<String, dynamic>;
+              var dB = b.data() as Map<String, dynamic>;
+              Timestamp tA = dA['timestampInicio'] ?? dA['dataHoraInicio'] ?? Timestamp.now();
+              Timestamp tB = dB['timestampInicio'] ?? dB['dataHoraInicio'] ?? Timestamp.now();
               return tB.compareTo(tA);
             });
 
             return TabBarView(
               children: [
-                _buildList(context, listaAtivas, true),     // Aba 1
-                _buildList(context, listaHistorico, false), // Aba 2
+                _buildList(context, listaAtivas, true),
+                _buildList(context, listaHistorico, false),
               ],
             );
           },
@@ -149,16 +213,16 @@ class MyReservationsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, List<DocumentSnapshot> lista, bool permiteCancelar) {
+  Widget _buildList(BuildContext context, List<DocumentSnapshot> lista, bool permiteEdicao) {
     if (lista.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(permiteCancelar ? Icons.event_busy : Icons.history_toggle_off, size: 60, color: Colors.grey[300]),
+            Icon(permiteEdicao ? Icons.event_busy : Icons.history_toggle_off, size: 60, color: Colors.grey[300]),
             const SizedBox(height: 10),
             Text(
-              permiteCancelar ? "Nenhuma reserva ativa." : "Histórico vazio.",
+              permiteEdicao ? "Nenhuma reserva ativa." : "Histórico vazio.",
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
           ],
@@ -186,7 +250,7 @@ class MyReservationsScreen extends StatelessWidget {
         if (status == 'cancelada') {
           corIcone = Colors.red;
           icone = Icons.cancel_outlined;
-        } else if (status == 'ativa' && !permiteCancelar) {
+        } else if (status == 'ativa' && !permiteEdicao) {
           corIcone = Colors.grey;
           icone = Icons.access_time;
           status = "EXPIRADA";
@@ -212,43 +276,36 @@ class MyReservationsScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 4),
                   if (dataTexto != null)
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(
-                          "$dataTexto • $horaEntrada até $horaSaida",
-                          style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87),
-                        ),
-                      ],
-                    )
+                    Text("$dataTexto • $horaEntrada até $horaSaida", style: const TextStyle(fontWeight: FontWeight.w500))
                   else
                     const Text("Reserva Imediata"),
                   
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: corIcone.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      status.toUpperCase(),
-                      style: TextStyle(color: corIcone, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
+                    decoration: BoxDecoration(color: corIcone.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                    child: Text(status.toUpperCase(), style: TextStyle(color: corIcone, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
-              trailing: permiteCancelar
-                  ? IconButton(
-                      icon: const Icon(Icons.cancel, color: Colors.redAccent),
-                      onPressed: () => _cancelarReserva(
-                        context, 
-                        reserva.id, 
-                        dados['estacionamentoId'], 
-                        dados['vagaId']
-                      ),
-                      tooltip: "Cancelar",
+              // AQUI ESTÃO OS BOTÕES DE AÇÃO
+              trailing: permiteEdicao
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min, // Ocupa o mínimo de espaço
+                      children: [
+                        // BOTÃO EDITAR
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                          onPressed: () => _editarReserva(context, reserva),
+                          tooltip: "Editar Reserva",
+                        ),
+                        // BOTÃO CANCELAR
+                        IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.redAccent),
+                          onPressed: () => _cancelarReserva(context, reserva.id, dados['estacionamentoId'], dados['vagaId']),
+                          tooltip: "Cancelar",
+                        ),
+                      ],
                     )
                   : null,
             ),
