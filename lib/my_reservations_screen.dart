@@ -5,13 +5,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 class MyReservationsScreen extends StatelessWidget {
   const MyReservationsScreen({super.key});
 
-  // Função para cancelar a reserva
+  // Função para CANCELAR (Mantida igual)
   Future<void> _cancelarReserva(BuildContext context, String reservaId, String estacionamentoId, String vagaId) async {
     bool? confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Cancelar Reserva"),
-        content: const Text("Tem certeza que deseja cancelar? A vaga será liberada."),
+        content: const Text("Tem certeza? A vaga será liberada imediatamente."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Não")),
           ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Sim, Cancelar")),
@@ -22,33 +22,111 @@ class MyReservationsScreen extends StatelessWidget {
     if (confirmar != true) return;
 
     try {
-      // 1. Atualiza o status da RESERVA para 'cancelada'
-      await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({
-        'status': 'cancelada',
-      });
-
-      // 2. Libera a VAGA no estacionamento (volta para 'livre')
-      await FirebaseFirestore.instance
-          .collection('estacionamentos')
-          .doc(estacionamentoId)
-          .collection('vagas')
-          .doc(vagaId)
-          .update({
+      await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({'status': 'cancelada'});
+      await FirebaseFirestore.instance.collection('estacionamentos').doc(estacionamentoId).collection('vagas').doc(vagaId).update({
         'status': 'livre',
-        'reservadaPor': FieldValue.delete(), // Remove o campo de dono
+        'reservadaPor': FieldValue.delete(),
+      });
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva cancelada.")));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+    }
+  }
+
+  // --- NOVA FUNÇÃO: EDITAR RESERVA ---
+  Future<void> _editarReserva(BuildContext context, DocumentSnapshot docReserva) async {
+    var dados = docReserva.data() as Map<String, dynamic>;
+    
+    // Recupera os dados atuais para preencher o calendário
+    Timestamp inicioAtualTs = dados['timestampInicio'] ?? Timestamp.now();
+    DateTime dataAtual = inicioAtualTs.toDate();
+    TimeOfDay entradaAtual = TimeOfDay.fromDateTime(dataAtual);
+    
+    Timestamp fimAtualTs = dados['timestampFim'] ?? Timestamp.now();
+    TimeOfDay saidaAtual = TimeOfDay.fromDateTime(fimAtualTs.toDate());
+
+    DateTime agora = DateTime.now();
+
+    // 1. SELETORES (Já iniciam com a data da reserva)
+    DateTime? novaData = await showDatePicker(
+      context: context,
+      initialDate: dataAtual.isBefore(agora) ? agora : dataAtual, // Se for antiga, põe hoje
+      firstDate: agora,
+      lastDate: agora.add(const Duration(days: 30)),
+      helpText: "EDITAR DATA",
+    );
+    if (novaData == null || !context.mounted) return;
+
+    TimeOfDay? novaEntrada = await showTimePicker(
+      context: context,
+      initialTime: entradaAtual,
+      helpText: "NOVA CHEGADA",
+    );
+    if (novaEntrada == null || !context.mounted) return;
+
+    TimeOfDay? novaSaida = await showTimePicker(
+      context: context,
+      initialTime: saidaAtual,
+      helpText: "NOVA SAÍDA",
+    );
+    if (novaSaida == null || !context.mounted) return;
+
+    // 2. MONTAR NOVOS DATETIMES
+    final DateTime novoInicio = DateTime(novaData.year, novaData.month, novaData.day, novaEntrada.hour, novaEntrada.minute);
+    final DateTime novoFim = DateTime(novaData.year, novaData.month, novaData.day, novaSaida.hour, novaSaida.minute);
+
+    if (novoFim.isBefore(novoInicio)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saída deve ser depois da entrada!"), backgroundColor: Colors.red));
+      return;
+    }
+
+    // 3. VERIFICAR CONFLITOS (Ignorando a própria reserva!)
+    try {
+      String estacionamentoId = dados['estacionamentoId'];
+      String vagaId = dados['vagaId'];
+
+      QuerySnapshot conflitos = await FirebaseFirestore.instance
+          .collection('reservas')
+          .where('estacionamentoId', isEqualTo: estacionamentoId)
+          .where('vagaId', isEqualTo: vagaId)
+          .where('status', isEqualTo: 'ativa')
+          .get();
+
+      bool temConflito = false;
+      for (var doc in conflitos.docs) {
+        // PULO DO GATO: Se for a mesma reserva que estou editando, ignora!
+        if (doc.id == docReserva.id) continue; 
+
+        var d = doc.data() as Map<String, dynamic>;
+        Timestamp? i = d['timestampInicio'];
+        Timestamp? f = d['timestampFim'];
+
+        if (i != null && f != null) {
+          if (novoInicio.isBefore(f.toDate()) && novoFim.isAfter(i.toDate())) {
+            temConflito = true;
+            break;
+          }
+        }
+      }
+
+      if (temConflito) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Horário indisponível!"), backgroundColor: Colors.orange));
+        return;
+      }
+
+      // 4. ATUALIZAR NO FIREBASE
+      await FirebaseFirestore.instance.collection('reservas').doc(docReserva.id).update({
+        'timestampInicio': Timestamp.fromDate(novoInicio),
+        'timestampFim': Timestamp.fromDate(novoFim),
+        'agendamentoData': "${novaData.day}/${novaData.month}/${novaData.year}",
+        'agendamentoEntrada': "${novaEntrada.hour}:${novaEntrada.minute.toString().padLeft(2, '0')}",
+        'agendamentoSaida': "${novaSaida.hour}:${novaSaida.minute.toString().padLeft(2, '0')}",
       });
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Reserva cancelada com sucesso.")),
-        );
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva atualizada!"), backgroundColor: Colors.green));
+
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao cancelar: $e"), backgroundColor: Colors.red),
-        );
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
     }
   }
 
@@ -56,91 +134,184 @@ class MyReservationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Minhas Reservas'),
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        // Busca apenas as reservas DESTE usuário
-        stream: FirebaseFirestore.instance
-            .collection('reservas')
-            .where('usuarioId', isEqualTo: userId)
-            //.orderBy('dataHoraInicio', descending: true) // Mais recentes primeiro
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text('Erro ao carregar reservas.'));
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                'Você ainda não fez nenhuma reserva.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            );
-          }
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Minhas Reservas'),
+          backgroundColor: Colors.blueAccent,
+          foregroundColor: Colors.white,
+          bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            tabs: [
+              Tab(icon: Icon(Icons.event_available), text: "Pendentes"),
+              Tab(icon: Icon(Icons.history), text: "Histórico"),
+            ],
+          ),
+        ),
+        body: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('reservas')
+              .where('usuarioId', isEqualTo: userId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) return Center(child: Text('Erro: ${snapshot.error}'));
+            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
-          var listaReservas = snapshot.data!.docs;
+            var todasReservas = snapshot.data!.docs;
+            List<DocumentSnapshot> listaAtivas = [];
+            List<DocumentSnapshot> listaHistorico = [];
+            DateTime agora = DateTime.now();
 
-          return ListView.builder(
-            itemCount: listaReservas.length,
-            padding: const EdgeInsets.all(10),
-            itemBuilder: (context, index) {
-              var reserva = listaReservas[index];
-              var dados = reserva.data() as Map<String, dynamic>;
-              
+            for (var doc in todasReservas) {
+              var dados = doc.data() as Map<String, dynamic>;
               String status = dados['status'] ?? 'ativa';
-              String nomeEstacionamento = dados['nomeEstacionamento'] ?? 'Estacionamento';
-              String nomeVaga = dados['nomeVaga'] ?? 'Vaga';
+              Timestamp? fimTs = dados['timestampFim'];
+              bool jaPassou = false;
               
-              // Formata a data (simples)
-              Timestamp? dataTs = dados['dataHoraInicio'];
-              String dataFormatada = dataTs != null 
-                  ? "${dataTs.toDate().day}/${dataTs.toDate().month} às ${dataTs.toDate().hour}:${dataTs.toDate().minute}"
-                  : "-";
+              if (fimTs != null) {
+                jaPassou = fimTs.toDate().isBefore(agora);
+              } else {
+                 Timestamp? criacao = dados['dataHoraInicio'];
+                 if (criacao != null) jaPassou = criacao.toDate().add(const Duration(hours: 24)).isBefore(agora);
+              }
 
-              // Define cor do status
-              Color corStatus = Colors.green;
-              if (status == 'cancelada') corStatus = Colors.red;
-              if (status == 'concluida') corStatus = Colors.grey;
+              if (status == 'cancelada' || status == 'concluida' || jaPassou) {
+                listaHistorico.add(doc);
+              } else {
+                listaAtivas.add(doc);
+              }
+            }
 
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: corStatus.withOpacity(0.2),
-                    child: Icon(Icons.history, color: corStatus),
-                  ),
-                  title: Text(nomeEstacionamento, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("$nomeVaga - $dataFormatada"),
-                      Text("Status: ${status.toUpperCase()}", style: TextStyle(color: corStatus, fontWeight: FontWeight.bold, fontSize: 12)),
-                    ],
-                  ),
-                  trailing: status == 'ativa' 
-                    ? IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.redAccent),
-                        onPressed: () => _cancelarReserva(
-                          context, 
-                          reserva.id, 
-                          dados['estacionamentoId'], 
-                          dados['vagaId']
-                        ),
-                        tooltip: "Cancelar Reserva",
-                      )
-                    : null, // Se não for ativa, não mostra botão
-                ),
-              );
-            },
-          );
-        },
+            listaAtivas.sort((a, b) {
+              var dA = a.data() as Map<String, dynamic>;
+              var dB = b.data() as Map<String, dynamic>;
+              Timestamp tA = dA['timestampInicio'] ?? dA['dataHoraInicio'] ?? Timestamp.now();
+              Timestamp tB = dB['timestampInicio'] ?? dB['dataHoraInicio'] ?? Timestamp.now();
+              return tA.compareTo(tB);
+            });
+
+            listaHistorico.sort((a, b) {
+              var dA = a.data() as Map<String, dynamic>;
+              var dB = b.data() as Map<String, dynamic>;
+              Timestamp tA = dA['timestampInicio'] ?? dA['dataHoraInicio'] ?? Timestamp.now();
+              Timestamp tB = dB['timestampInicio'] ?? dB['dataHoraInicio'] ?? Timestamp.now();
+              return tB.compareTo(tA);
+            });
+
+            return TabBarView(
+              children: [
+                _buildList(context, listaAtivas, true),
+                _buildList(context, listaHistorico, false),
+              ],
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _buildList(BuildContext context, List<DocumentSnapshot> lista, bool permiteEdicao) {
+    if (lista.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(permiteEdicao ? Icons.event_busy : Icons.history_toggle_off, size: 60, color: Colors.grey[300]),
+            const SizedBox(height: 10),
+            Text(
+              permiteEdicao ? "Nenhuma reserva ativa." : "Histórico vazio.",
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: lista.length,
+      padding: const EdgeInsets.all(12),
+      itemBuilder: (context, index) {
+        var reserva = lista[index];
+        var dados = reserva.data() as Map<String, dynamic>;
+        
+        String status = dados['status'] ?? 'ativa';
+        String nomeEstacionamento = dados['nomeEstacionamento'] ?? 'Estacionamento';
+        String nomeVaga = dados['nomeVaga'] ?? 'Vaga';
+        String? dataTexto = dados['agendamentoData'];
+        String? horaEntrada = dados['agendamentoEntrada'];
+        String? horaSaida = dados['agendamentoSaida'];
+
+        Color corIcone = Colors.green;
+        IconData icone = Icons.check_circle_outline;
+
+        if (status == 'cancelada') {
+          corIcone = Colors.red;
+          icone = Icons.cancel_outlined;
+        } else if (status == 'ativa' && !permiteEdicao) {
+          corIcone = Colors.grey;
+          icone = Icons.access_time;
+          status = "EXPIRADA";
+        } else if (status == 'concluida') {
+          corIcone = Colors.grey;
+          icone = Icons.task_alt;
+        }
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: corIcone.withOpacity(0.1),
+                child: Icon(icone, color: corIcone),
+              ),
+              title: Text(nomeEstacionamento, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  if (dataTexto != null)
+                    Text("$dataTexto • $horaEntrada até $horaSaida", style: const TextStyle(fontWeight: FontWeight.w500))
+                  else
+                    const Text("Reserva Imediata"),
+                  
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: corIcone.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                    child: Text(status.toUpperCase(), style: TextStyle(color: corIcone, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              // AQUI ESTÃO OS BOTÕES DE AÇÃO
+              trailing: permiteEdicao
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min, // Ocupa o mínimo de espaço
+                      children: [
+                        // BOTÃO EDITAR
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                          onPressed: () => _editarReserva(context, reserva),
+                          tooltip: "Editar Reserva",
+                        ),
+                        // BOTÃO CANCELAR
+                        IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.redAccent),
+                          onPressed: () => _cancelarReserva(context, reserva.id, dados['estacionamentoId'], dados['vagaId']),
+                          tooltip: "Cancelar",
+                        ),
+                      ],
+                    )
+                  : null,
+            ),
+          ),
+        );
+      },
     );
   }
 }
