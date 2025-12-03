@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importe isto n
 import 'dart:async'; // Importe para usar o Completer
 import 'parking_details_screen.dart';
 import 'my_reservations_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -237,6 +238,27 @@ class ProfileTab extends StatelessWidget {
                 ),
               ),
             ),
+
+            const SizedBox(height: 15),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                  );
+                },
+                icon: const Icon(Icons.admin_panel_settings),
+                label: const Text('Painel do Administrador'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[800], // Laranja para diferenciar
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+
             const Spacer(),
             
             // Botão de Sair (Logout)

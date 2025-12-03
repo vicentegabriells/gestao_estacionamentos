@@ -122,10 +122,10 @@ class ParkingDetailsScreen extends StatelessWidget {
         context: context,
         builder: (context) => AlertDialog(
           title: Text("Reservar $nomeVaga?"),
-          content: Text("Agendamento para:\n$dataTexto\n$horaTexto"),
+          content: Text("Agendamento para:\n📅 Dia: $dataTexto\n⏰ Horário: $horaTexto"),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar")),
-            ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Confirmar")),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar ❌")),
+            ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Confirmar ✅")),
           ],
         ),
       );

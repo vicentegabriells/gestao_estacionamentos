@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'checkout_screen.dart';
 
 class MyReservationsScreen extends StatelessWidget {
   const MyReservationsScreen({super.key});
@@ -291,14 +292,29 @@ class MyReservationsScreen extends StatelessWidget {
               // AQUI ESTÃO OS BOTÕES DE AÇÃO
               trailing: permiteEdicao
                   ? Row(
-                      mainAxisSize: MainAxisSize.min, // Ocupa o mínimo de espaço
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        // BOTÃO PAGAR (NOVO!)
+                        IconButton(
+                          icon: const Icon(Icons.payments, color: Colors.green),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CheckoutScreen(reserva: reserva),
+                              ),
+                            );
+                          },
+                          tooltip: "Pagar agora",
+                        ),
+                        
                         // BOTÃO EDITAR
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.blueAccent),
                           onPressed: () => _editarReserva(context, reserva),
-                          tooltip: "Editar Reserva",
+                          tooltip: "Editar",
                         ),
+                        
                         // BOTÃO CANCELAR
                         IconButton(
                           icon: const Icon(Icons.cancel, color: Colors.redAccent),
