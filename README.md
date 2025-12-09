@@ -48,13 +48,13 @@ O projeto depende de serviços em nuvem do Google e do Google Maps para o funcio
 
 ## B. Configuração das Chaves de API do Google Maps
 O aplicativo usa o Google Maps tanto para o Front-end Web quanto para o Android.
+
 1. Obtenha uma chave de API no Google Cloud Console.
 2. Para Web: No arquivo ```web/index.html```, adicione sua chave na tag ```<script>``` do Google Maps.
-3. Para Android: No arquivo ```android/app/src/main/AndroidManifest.xml```, adicione sua chave na tag ```<application>```:
-<manifest ...>
-    <application ...>
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="SUA_CHAVE_API_AQUI"/>
-        </application>
-</manifest>
+3. Para Android: No arquivo ```android/app/src/main/AndroidManifest.xml```, adicione sua chave na tag ```<application>```.
+
+### 4. ▶️ Executando o Projeto
+Após todas as configurações e a inserção da chave do Google Maps, você pode rodar o projeto no Chrome (Web) ou em um emulador/dispositivo Android.
+
+1. Escolha o dispositivo de destino (Web ou Android).
+2. Execute o comando flutter run no terminal: ```flutter run```
