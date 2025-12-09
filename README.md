@@ -29,7 +29,8 @@ Para rodar este projeto em sua máquina local, você precisará ter o ambiente d
 
 Após clonar o repositório, navegue até a pasta raiz do projeto no terminal e execute o comando para instalar todas as dependências do Dart:
 
-```bash
+```bash```
+
 flutter pub get
 
 ### 3. ⚙️ Configuração do Firebase e Google Maps
