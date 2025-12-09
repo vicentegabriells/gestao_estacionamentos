@@ -3,6 +3,7 @@
 ## 📝 Sobre o Projeto
 
 Este é um projeto desenvolvido para a disciplina de **Programação para Dispositivos Móveis**, solicitada pelo **Professor Jean Louis**.
+Estudantes: **Larissa Borges Nascimento de Oliveira**, **Thiago Santana Santos** e **Vicente Gabriel Loiola Souza**.
 
 O **PIGE** é um aplicativo mobile e web construído em **Flutter** e **Firebase** que visa modernizar a experiência de gerenciamento e uso de estacionamentos.
 
@@ -36,3 +37,24 @@ flutter pub get
 ### 3. ⚙️ Configuração do Firebase e Google Maps
 
 O projeto depende de serviços em nuvem do Google e do Google Maps para o funcionamento do mapa e da persistência de dados.
+
+## A. Configuração do Firebase
+
+1. Crie um novo projeto no Console do Firebase.
+2. Conecte o Flutter ao Firebase, seguindo os passos de inicialização para Android e Web: flutter configure
+3. No console do Firebase, ative os seguintes serviços:
+* Authentication: Habilite o login por Email/Senha.
+* Firestore Database: Crie as coleções usuarios, estacionamentos, vagas (subcoleção) e reservas.
+
+## B. Configuração das Chaves de API do Google Maps
+O aplicativo usa o Google Maps tanto para o Front-end Web quanto para o Android.
+1. Obtenha uma chave de API no Google Cloud Console.
+2. Para Web: No arquivo web/index.html, adicione sua chave na tag <script> do Google Maps.
+3. Para Android: No arquivo android/app/src/main/AndroidManifest.xml, adicione sua chave na tag <application>:
+<manifest ...>
+    <application ...>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="SUA_CHAVE_API_AQUI"/>
+        </application>
+</manifest>
