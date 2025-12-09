@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+//ainda em construção
+
+import 'package:flutter/material.dart'; // Importa o Flutter Material
+import 'package:cloud_firestore/cloud_firestore.dart'; // Importa o Firestore
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});

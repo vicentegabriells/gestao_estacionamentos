@@ -1,6 +1,6 @@
-import 'home_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'home_screen.dart';// Importe a tela principal após o login
+import 'package:flutter/material.dart'; // Importa o Flutter Material
+import 'package:firebase_auth/firebase_auth.dart'; // Importa o Firebase Auth
 import 'registration_screen.dart'; // Importe a tela de cadastro para poder navegar até ela
 
 class LoginScreen extends StatefulWidget {

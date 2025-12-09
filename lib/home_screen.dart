@@ -1,15 +1,21 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // <--- ADICIONE ESTE IMPORT
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+// Importa o Firestore para acesso ao banco de dados
+import 'package:google_maps_flutter/google_maps_flutter.dart'; 
+// Importa o widget principal do Google Maps
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart'; // Para poder voltar ao login ao sair
-import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importe isto no topo do arquivo!
-import 'dart:async'; // Importe para usar o Completer
-import 'parking_details_screen.dart';
-import 'my_reservations_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
+// Importa a autenticação para gerenciar o login/logout
+import 'login_screen.dart'; 
+// Para poder voltar ao login ao sair
+import 'parking_details_screen.dart'; 
+// Tela de detalhes do estacionamento
+import 'my_reservations_screen.dart'; 
+// Tela de gerenciamento de reservas
+import 'admin_dashboard_screen.dart'; 
+// Painel do administrador
 
+// Esta classe é o container principal que gerencia as abas (Mapa e Perfil)
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -20,15 +26,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0; // Controla qual aba está ativa (0 = Mapa, 1 = Perfil)
 
-  // Lista de telas que serão exibidas em cada aba
+  // Lista de telas que serão exibidas em cada aba do BottomNavigationBar
   static final List<Widget> _widgetOptions = <Widget>[
-    // ABA 0: O MAPA (Por enquanto, um placeholder)
+    // ABA 0: O MAPA com a lógica de marcadores
     const MapTab(),
     
-    // ABA 1: O PERFIL
+    // ABA 1: O PERFIL do usuário logado
     const ProfileTab(),
   ];
 
+  // Função chamada ao tocar em um item do menu de navegação inferior
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -38,7 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _widgetOptions.elementAt(_selectedIndex),
+      // Exibe a tela correspondente ao índice selecionado
+      body: _widgetOptions.elementAt(_selectedIndex), 
+      // Barra de navegação inferior
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -58,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- WIDGET DA ABA DE MAPA (Agora com Google Maps) ---
+// --- WIDGET DA ABA DE MAPA (MapTab) ---
 class MapTab extends StatefulWidget {
   const MapTab({super.key});
 
@@ -67,52 +76,53 @@ class MapTab extends StatefulWidget {
 }
 
 class _MapTabState extends State<MapTab> {
+  // Controlador para interagir com o mapa (ex: mover câmera)
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   
-  // Conjunto de marcadores que aparecerão no mapa
+  // Conjunto de marcadores (pinos) que serão exibidos no mapa
   Set<Marker> _markers = {};
 
-  // Posição inicial (Lagarto/SE)
+  // Posição inicial da câmera (Lagarto/SE - Padrão)
   static const CameraPosition _posicaoInicial = CameraPosition(
-    target: LatLng(-10.9171, -37.6500), 
+    target: LatLng(-10.9171, -37.6500), // Coordenadas iniciais
     zoom: 14.0,
   );
 
   @override
   void initState() {
     super.initState();
-    // Assim que a tela abrir, buscamos os estacionamentos
+    // Inicia o carregamento dos dados do estacionamento ao abrir a tela
     _carregarEstacionamentos();
   }
 
-  // Função que vai no Firebase buscar os dados
+  // Função principal que busca os estacionamentos no Firebase e cria os marcadores
   Future<void> _carregarEstacionamentos() async {
-    // 1. Acessa a coleção 'estacionamentos'
+    // 1. Acessa a coleção 'estacionamentos' no Firestore
     FirebaseFirestore.instance
         .collection('estacionamentos')
         .get()
         .then((querySnapshot) {
       
-      // Criamos um conjunto temporário de marcadores
+      // Inicializa a lista de marcadores temporária
       Set<Marker> novosMarcadores = {};
 
-      // 2. Para cada documento encontrado no banco...
+      // 2. Itera sobre cada documento (estacionamento) encontrado no banco
       for (var doc in querySnapshot.docs) {
         Map<String, dynamic> dados = doc.data();
 
-        // Verifica se tem o campo de localização
+        // Garante que o documento tenha o campo 'localizacao'
         if (dados.containsKey('localizacao')) {
-          GeoPoint ponto = dados['localizacao']; // O Firestore salva como GeoPoint
-          
-          // 3. Cria o Marcador para o Google Maps
+          GeoPoint ponto = dados['localizacao']; // Converte o Firestore GeoPoint
+
+          // 3. Cria o Marcador (pino) para o Google Maps
           Marker marker = Marker(
-            markerId: MarkerId(doc.id), // O ID do documento é o ID do marcador
+            markerId: MarkerId(doc.id), // ID do documento = ID do marcador
             position: LatLng(ponto.latitude, ponto.longitude),
             infoWindow: InfoWindow(
-              title: dados['nome'] ?? 'Estacionamento', // Mostra o nome ao clicar
-              snippet: dados['endereco'] ?? '', // Mostra o endereço
+              title: dados['nome'] ?? 'Estacionamento',
+              snippet: dados['endereco'] ?? '',
               onTap: () {
-                // --- CÓDIGO NOVO AQUI ---
+                // Ação ao clicar no balão do marcador: Navega para a tela de Detalhes
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => ParkingDetailsScreen(
@@ -123,14 +133,14 @@ class _MapTabState extends State<MapTab> {
                 );
               },
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // Cor do pino
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           );
 
           novosMarcadores.add(marker);
         }
       }
 
-      // 4. Atualiza a tela com os novos marcadores
+      // 4. Atualiza a interface (setState) com os novos marcadores
       setState(() {
         _markers = novosMarcadores;
       });
@@ -154,23 +164,23 @@ class _MapTabState extends State<MapTab> {
         onMapCreated: (GoogleMapController controller) {
           _controller.complete(controller);
         },
-        // Passamos a nossa lista de marcadores aqui
+        // Exibe o conjunto de marcadores carregados do Firebase
         markers: _markers, 
       ),
     );
   }
 }
 
-// --- WIDGET DA ABA DE PERFIL ---
+// --- WIDGET DA ABA DE PERFIL (ProfileTab) ---
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
-  // Função para deslogar
+  // Função para deslogar o usuário do Firebase
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     
     if (context.mounted) {
-      // Remove todas as telas anteriores e volta para o Login
+      // Navega para a tela de Login e remove o histórico de navegação (segurança)
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (Route<dynamic> route) => false,
@@ -180,7 +190,7 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Pega o usuário atual logado
+    // Pega as informações do usuário atualmente logado (do Firebase Auth)
     final User? user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
@@ -193,6 +203,7 @@ class ProfileTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Avatar do usuário
             const Center(
               child: CircleAvatar(
                 radius: 50,
@@ -200,6 +211,8 @@ class ProfileTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 30),
+            
+            // Exibe o E-mail e o UID (informações de segurança)
             const Text(
               'E-mail logado:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -220,11 +233,12 @@ class ProfileTab extends StatelessWidget {
             
             const SizedBox(height: 30), // Espaço
 
-            // --- NOVO BOTÃO AQUI ---
+            // --- BOTÃO: MINHAS RESERVAS (Motorista) ---
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  // Navega para a tela de gerenciamento de reservas
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const MyReservationsScreen()),
                   );
@@ -241,10 +255,12 @@ class ProfileTab extends StatelessWidget {
 
             const SizedBox(height: 15),
 
+            // --- BOTÃO: PAINEL DO ADMINISTRADOR (Acesso restrito/teste) ---
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  // Navega para o painel de gestão
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
                   );
@@ -252,20 +268,20 @@ class ProfileTab extends StatelessWidget {
                 icon: const Icon(Icons.admin_panel_settings),
                 label: const Text('Painel do Administrador'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[800], // Laranja para diferenciar
+                  backgroundColor: Colors.orange[800], // Cor de destaque para o Admin
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
 
-            const Spacer(),
+            const Spacer(), // Empurra o botão Sair para o final da tela
             
             // Botão de Sair (Logout)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _signOut(context),
+                onPressed: () => _signOut(context), // Chama a função de deslogar
                 icon: const Icon(Icons.logout),
                 label: const Text('Sair do Aplicativo'),
                 style: ElevatedButton.styleFrom(

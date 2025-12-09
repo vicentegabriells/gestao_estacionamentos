@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';// Importa o Flutter Material
+import 'package:cloud_firestore/cloud_firestore.dart'; // Importa o Firestore
 
-class CheckoutScreen extends StatefulWidget {
+class CheckoutScreen extends StatefulWidget { // Tela de Checkout / Pagamento
   final DocumentSnapshot reserva;
 
   const CheckoutScreen({super.key, required this.reserva});
@@ -10,7 +10,7 @@ class CheckoutScreen extends StatefulWidget {
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
-class _CheckoutScreenState extends State<CheckoutScreen> {
+class _CheckoutScreenState extends State<CheckoutScreen> { // Estado da Tela de Checkout
   bool _carregando = true;
   double _valorTotal = 0.0;
   int _horasTotais = 0;
@@ -53,13 +53,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         // Se tiver minutos quebrados (ex: 1h e 10min), arredonda pra 2h (regra de negócio comum)
         if (diferenca.inMinutes % 60 > 0) horas += 1;
 
-        setState(() {
+        setState(() { // Atualiza o estado com os valores calculados
           _horasTotais = horas;
           _valorTotal = horas * precoHora;
           _carregando = false;
         });
       }
-    } catch (e) {
+    } catch (e) {// Tratamento de erros
       setState(() {
         _carregando = false;
       });
@@ -67,7 +67,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Future<void> _processarPagamento() async {
+  Future<void> _processarPagamento() async { // Simula o processamento do pagamento
     setState(() => _carregando = true);
 
     // Simulação de tempo de processamento bancário (2 segundos)
@@ -104,16 +104,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SnackBar(content: Text("Pagamento confirmado! Obrigado."), backgroundColor: Colors.green),
         );
       }
-    } catch (e) {
+    } catch (e) { // Tratamento de erros
       setState(() => _carregando = false);
-      if (mounted) {
+      if (mounted) { // Verifica se o contexto ainda está válido
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { // Construção da interface do usuário
     var dados = widget.reserva.data() as Map<String, dynamic>;
 
     return Scaffold(

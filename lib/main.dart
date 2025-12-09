@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:flutter/material.dart'; // Importa o Flutter Material
+import 'package:firebase_core/firebase_core.dart'; // Importa o Firebase Core
+import 'firebase_options.dart'; // Importa as opções do Firebase geradas
 
 // Importante: Importar o arquivo da tela de cadastro que você criou
 import 'login_screen.dart';
 
-Future<void> main() async {
+Future<void> main() async { // Função principal assíncrona
   WidgetsFlutterBinding.ensureInitialized();
   
   await Firebase.initializeApp(

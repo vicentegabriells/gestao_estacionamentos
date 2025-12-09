@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'checkout_screen.dart';
+import 'package:flutter/material.dart'; // Flutter Framework
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firebase Firestore
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth
+import 'checkout_screen.dart'; // Tela de Checkout
 
 class MyReservationsScreen extends StatelessWidget {
   const MyReservationsScreen({super.key});
@@ -22,7 +22,7 @@ class MyReservationsScreen extends StatelessWidget {
 
     if (confirmar != true) return;
 
-    try {
+    try { // Atualiza o status da reserva para 'cancelada' e libera a vaga
       await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({'status': 'cancelada'});
       await FirebaseFirestore.instance.collection('estacionamentos').doc(estacionamentoId).collection('vagas').doc(vagaId).update({
         'status': 'livre',
@@ -56,14 +56,14 @@ class MyReservationsScreen extends StatelessWidget {
       lastDate: agora.add(const Duration(days: 30)),
       helpText: "EDITAR DATA",
     );
-    if (novaData == null || !context.mounted) return;
+    if (novaData == null || !context.mounted) return; // Usuário cancelou
 
     TimeOfDay? novaEntrada = await showTimePicker(
       context: context,
       initialTime: entradaAtual,
       helpText: "NOVA CHEGADA",
     );
-    if (novaEntrada == null || !context.mounted) return;
+    if (novaEntrada == null || !context.mounted) return; // Usuário cancelou
 
     TimeOfDay? novaSaida = await showTimePicker(
       context: context,
@@ -76,7 +76,7 @@ class MyReservationsScreen extends StatelessWidget {
     final DateTime novoInicio = DateTime(novaData.year, novaData.month, novaData.day, novaEntrada.hour, novaEntrada.minute);
     final DateTime novoFim = DateTime(novaData.year, novaData.month, novaData.day, novaSaida.hour, novaSaida.minute);
 
-    if (novoFim.isBefore(novoInicio)) {
+    if (novoFim.isBefore(novoInicio)) { // Validação básica
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saída deve ser depois da entrada!"), backgroundColor: Colors.red));
       return;
     }
@@ -86,7 +86,7 @@ class MyReservationsScreen extends StatelessWidget {
       String estacionamentoId = dados['estacionamentoId'];
       String vagaId = dados['vagaId'];
 
-      QuerySnapshot conflitos = await FirebaseFirestore.instance
+      QuerySnapshot conflitos = await FirebaseFirestore.instance // Verifica conflitos de horário
           .collection('reservas')
           .where('estacionamentoId', isEqualTo: estacionamentoId)
           .where('vagaId', isEqualTo: vagaId)
@@ -102,7 +102,7 @@ class MyReservationsScreen extends StatelessWidget {
         Timestamp? i = d['timestampInicio'];
         Timestamp? f = d['timestampFim'];
 
-        if (i != null && f != null) {
+        if (i != null && f != null) { // Verifica sobreposição
           if (novoInicio.isBefore(f.toDate()) && novoFim.isAfter(i.toDate())) {
             temConflito = true;
             break;
@@ -110,7 +110,7 @@ class MyReservationsScreen extends StatelessWidget {
         }
       }
 
-      if (temConflito) {
+      if (temConflito) { // Avisar usuário e sair
         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Horário indisponível!"), backgroundColor: Colors.orange));
         return;
       }
@@ -125,14 +125,14 @@ class MyReservationsScreen extends StatelessWidget {
       });
 
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva atualizada!"), backgroundColor: Colors.green));
-
-    } catch (e) {
+      // FIM DA FUNÇÃO
+    } catch (e) { // Tratamento de erros
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { // Construção da interface do usuário
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return DefaultTabController(
