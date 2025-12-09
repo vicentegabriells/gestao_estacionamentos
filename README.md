@@ -49,8 +49,8 @@ O projeto depende de serviços em nuvem do Google e do Google Maps para o funcio
 ## B. Configuração das Chaves de API do Google Maps
 O aplicativo usa o Google Maps tanto para o Front-end Web quanto para o Android.
 1. Obtenha uma chave de API no Google Cloud Console.
-2. Para Web: No arquivo web/index.html, adicione sua chave na tag <script> do Google Maps.
-3. Para Android: No arquivo android/app/src/main/AndroidManifest.xml, adicione sua chave na tag <application>:
+2. Para Web: No arquivo ```web/index.html```, adicione sua chave na tag ```<script>``` do Google Maps.
+3. Para Android: No arquivo ```android/app/src/main/AndroidManifest.xml```, adicione sua chave na tag ```<application>```:
 <manifest ...>
     <application ...>
         <meta-data
