@@ -54,8 +54,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Opcional: Navegar para a tela principal ou de login
-        // Navigator.of(context).pop(); 
+        // Redireciona para a tela de login
+        Navigator.pushReplacementNamed(context, '/login');
       }
 
     } on FirebaseAuthException catch (e) {

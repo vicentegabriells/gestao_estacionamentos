@@ -287,7 +287,7 @@ class ProfileTab extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
                   foregroundColor: Colors.white,
-                ),
+                ),      
               ),
             ),
           ],
