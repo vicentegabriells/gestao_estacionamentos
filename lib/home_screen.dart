@@ -175,12 +175,10 @@ class _MapTabState extends State<MapTab> {
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
-  // Função para deslogar o usuário do Firebase
+  // Função para deslogar do Firebase Auth
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    
     if (context.mounted) {
-      // Navega para a tela de Login e remove o histórico de navegação (segurança)
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (Route<dynamic> route) => false,
@@ -188,9 +186,16 @@ class ProfileTab extends StatelessWidget {
     }
   }
 
+  // Função para alternar entre perfil de 'admin' e 'usuario' no Firestore
+  Future<void> _alternarPerfil(String uid, String tipoAtual) async {
+    String novoTipo = tipoAtual == 'admin' ? 'usuario' : 'admin';
+    await FirebaseFirestore.instance.collection('usuarios').doc(uid).update({
+      'tipoPerfil': novoTipo,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Pega as informações do usuário atualmente logado (do Firebase Auth)
     final User? user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
@@ -198,100 +203,127 @@ class ProfileTab extends StatelessWidget {
         title: const Text('Meu Perfil'),
         automaticallyImplyLeading: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Avatar do usuário
-            const Center(
-              child: CircleAvatar(
-                radius: 50,
-                child: Icon(Icons.person, size: 50),
-              ),
-            ),
-            const SizedBox(height: 30),
-            
-            // Exibe o E-mail e o UID (informações de segurança)
-            const Text(
-              'E-mail logado:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            Text(
-              user?.email ?? 'Usuário não identificado',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'UID (ID do Usuário):',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            Text(
-              user?.uid ?? '-',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            
-            const SizedBox(height: 30), // Espaço
+      body: StreamBuilder<DocumentSnapshot>(
+        // Escuta as mudanças no documento do usuário logado em tempo real
+        stream: FirebaseFirestore.instance.collection('usuarios').doc(user?.uid).snapshots(),
+        builder: (context, snapshot) {
+          // Enquanto carrega os dados do Firestore
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // --- BOTÃO: MINHAS RESERVAS (Motorista) ---
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // Navega para a tela de gerenciamento de reservas
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const MyReservationsScreen()),
-                  );
-                },
-                icon: const Icon(Icons.list_alt),
-                label: const Text('Minhas Reservas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+          // Se houver erro ou o documento não existir
+          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text("Erro ao carregar dados do perfil."));
+          }
+
+          // Extrai os dados do documento
+          var dados = snapshot.data!.data() as Map<String, dynamic>;
+          String tipoPerfil = dados['tipoPerfil'] ?? 'usuario';
+          String nomeUsuario = dados['nome'] ?? 'Usuário';
+
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: CircleAvatar(
+                    radius: 50,
+                    child: Icon(Icons.person, size: 50),
+                  ),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            // --- BOTÃO: PAINEL DO ADMINISTRADOR (Acesso restrito/teste) ---
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // Navega para o painel de gestão
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                  );
-                },
-                icon: const Icon(Icons.admin_panel_settings),
-                label: const Text('Painel do Administrador'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[800], // Cor de destaque para o Admin
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(height: 30),
+                Text(
+                  'Nome:',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-              ),
-            ),
-
-            const Spacer(), // Empurra o botão Sair para o final da tela
-            
-            // Botão de Sair (Logout)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _signOut(context), // Chama a função de deslogar
-                icon: const Icon(Icons.logout),
-                label: const Text('Sair do Aplicativo'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
+                Text(nomeUsuario, style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 10),
+                Text(
+                  'E-mail logado:',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-              ),
+                Text(user?.email ?? '-', style: const TextStyle(fontSize: 18)),
+                
+                const SizedBox(height: 30),
+
+                // Botão "Minhas Reservas" - Disponível para todos
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const MyReservationsScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.list_alt),
+                    label: const Text('Minhas Reservas'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                // --- BOTÃO LÓGICO: Só aparece se tipoPerfil for 'admin' ---
+                if (tipoPerfil == 'admin')
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.admin_panel_settings),
+                      label: const Text('Painel do Administrador'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[800],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+                const Text(
+                  "Configurações:",
+                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                ),
+                
+                // Opção para o usuário mudar o próprio papel (Útil para testes)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Alternar tipo de conta"),
+                  subtitle: Text("Atual: ${tipoPerfil.toUpperCase()}"),
+                  trailing: const Icon(Icons.swap_horiz),
+                  onTap: () => _alternarPerfil(user!.uid, tipoPerfil),
+                ),
+
+                const Spacer(),
+                
+                // Botão de Sair
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _signOut(context),
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Sair do Aplicativo'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
