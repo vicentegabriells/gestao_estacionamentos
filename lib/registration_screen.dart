@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Importe o firestore se quiser salvar os dados do usuário após o cadastro
-// import 'package:cloud_firestore/cloud_firestore.dart';
+// Importação do Firestore ativada para permitir a gravação de dados
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -11,42 +11,36 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  // Controladores para ler o texto dos campos
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController(); // Para o REQ-001
+  final TextEditingController _nameController = TextEditingController();
 
-  // Gerencia o estado de carregamento
   bool _isLoading = false;
 
-  // Função para lidar com o cadastro
   Future<void> _registerUser() async {
-    // 1. Inicia o carregamento
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // 2. Usa o Firebase Auth para criar o usuário
+      // 1. Cria a conta de acesso no Firebase Authentication
       UserCredential userCredential = 
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 3. (Passo Opcional, mas recomendado)
-      //    Se o usuário foi criado com sucesso, pegue o UID dele
-      //    e salve os dados extras (nome, tipoPerfil) no Firestore.
+      // 2. GRAVAÇÃO NO BANCO DE DADOS (Firestore) ATIVADA
+      // Obtém o UID único gerado para o novo usuário
+      String userId = userCredential.user!.uid; 
       
-      // String userId = userCredential.user!.uid;
-      // await FirebaseFirestore.instance.collection('usuarios').doc(userId).set({
-      //   'nome': _nameController.text.trim(),
-      //   'email': _emailController.text.trim(),
-      //   'tipoPerfil': 'usuario', // Define o perfil padrão
-      // });
+      // Cria um documento na coleção 'usuarios' com as informações adicionais
+      await FirebaseFirestore.instance.collection('usuarios').doc(userId).set({
+        'nome': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'tipoPerfil': 'usuario', // Define o perfil padrão do sistema
+      });
 
-
-      // 4. Mostra sucesso (se o contexto ainda for válido)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -54,12 +48,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Opcional: Navegar para a tela principal ou de login
-        // Navigator.of(context).pop(); 
       }
 
     } on FirebaseAuthException catch (e) {
-      // 5. Lida com erros do Firebase Auth
       String errorMessage = 'Ocorreu um erro.';
       if (e.code == 'weak-password') {
         errorMessage = 'A senha é muito fraca.';
@@ -78,7 +69,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
       }
     } catch (e) {
-      // 6. Lida com outros erros
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -89,7 +79,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
     }
 
-    // 7. Para o carregamento
     setState(() {
       _isLoading = false;
     });
@@ -106,7 +95,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Campo de Nome (REQ-001)
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -116,8 +104,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               keyboardType: TextInputType.name,
             ),
             const SizedBox(height: 16),
-
-            // Campo de E-mail (REQ-001)
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
@@ -127,21 +113,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
-
-            // Campo de Senha (REQ-001)
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(
                 labelText: 'Senha (mín. 6 caracteres)',
                 border: OutlineInputBorder(),
               ),
-              obscureText: true, // Esconde a senha
+              obscureText: true,
             ),
             const SizedBox(height: 24),
-
-            // Botão de Cadastrar
             _isLoading
-                ? const CircularProgressIndicator() // Mostra o "loading"
+                ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: _registerUser,
                     style: ElevatedButton.styleFrom(
