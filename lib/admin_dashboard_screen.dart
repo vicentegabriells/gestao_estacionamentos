@@ -1,5 +1,5 @@
 //ainda em construção
-
+import 'admin_parking_management_screen.dart';
 import 'package:flutter/material.dart'; // Importa o Flutter Material
 import 'package:cloud_firestore/cloud_firestore.dart'; // Importa o Firestore
 
@@ -11,12 +11,11 @@ class AdminDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel do Administrador'),
-        backgroundColor: Colors.orange[800], // Cor diferente para diferenciar do app de motorista
+        backgroundColor: Colors.orange[800],
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Em um app real, filtraríamos por adminId: .where('adminId', isEqualTo: user.uid)
-        // Para o trabalho acadêmico, vamos listar todos para facilitar o teste
+        // Lista todos os estacionamentos (Para este trabalho, assumimos que o admin vê tudo)
         stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text('Erro ao carregar dados.'));
@@ -51,9 +50,14 @@ class AdminDashboardScreen extends StatelessWidget {
                   subtitle: Text(dados['endereco'] ?? 'Sem Endereço'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    // AQUI: Futuramente vamos para a tela de "Gerenciar Vagas"
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Gerenciar: ${dados['nome']}")),
+                    // Agora o import lá em cima permite que essa navegação funcione
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => AdminParkingManagementScreen(
+                          estacionamentoId: doc.id,
+                          nomeEstacionamento: dados['nome'] ?? 'Estacionamento',
+                        ),
+                      ),
                     );
                   },
                 ),
