@@ -1,7 +1,6 @@
-//ainda em construção
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_parking_management_screen.dart';
-import 'package:flutter/material.dart'; // Importa o Flutter Material
-import 'package:cloud_firestore/cloud_firestore.dart'; // Importa o Firestore
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -15,7 +14,6 @@ class AdminDashboardScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Lista todos os estacionamentos (Para este trabalho, assumimos que o admin vê tudo)
         stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text('Erro ao carregar dados.'));
@@ -35,43 +33,78 @@ class AdminDashboardScreen extends StatelessWidget {
               var doc = listaEstacionamentos[index];
               var dados = doc.data() as Map<String, dynamic>;
 
-              return Card(
-                elevation: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.orange[100],
-                    child: const Icon(Icons.business, color: Colors.orange),
-                  ),
-                  title: Text(
-                    dados['nome'] ?? 'Sem Nome',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(dados['endereco'] ?? 'Sem Endereço'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // Agora o import lá em cima permite que essa navegação funcione
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => AdminParkingManagementScreen(
-                          estacionamentoId: doc.id,
-                          nomeEstacionamento: dados['nome'] ?? 'Estacionamento',
-                        ),
+              return StreamBuilder<QuerySnapshot>(
+                // Sub-stream para contar as vagas deste estacionamento específico
+                stream: FirebaseFirestore.instance
+                    .collection('estacionamentos')
+                    .doc(doc.id)
+                    .collection('vagas')
+                    .snapshots(),
+                builder: (context, vagaSnapshot) {
+                  int totalVagas = 0;
+                  int vagasOcupadas = 0;
+
+                  if (vagaSnapshot.hasData) {
+                    totalVagas = vagaSnapshot.data!.docs.length;
+                    // Conta quantas vagas NÃO estão no status 'livre'
+                    vagasOcupadas = vagaSnapshot.data!.docs
+                        .where((v) => (v.data() as Map<String, dynamic>)['status'] != 'livre')
+                        .length;
+                  }
+
+                  double percentual = totalVagas > 0 ? (vagasOcupadas / totalVagas) : 0;
+
+                  return Card(
+                    elevation: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.orange[100],
+                        child: const Icon(Icons.business, color: Colors.orange),
                       ),
-                    );
-                  },
-                ),
+                      title: Text(
+                        dados['nome'] ?? 'Sem Nome',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(dados['endereco'] ?? 'Sem Endereço'),
+                          const SizedBox(height: 8),
+                          // Barra de progresso visual de ocupação
+                          LinearProgressIndicator(
+                            value: percentual,
+                            backgroundColor: Colors.grey[200],
+                            color: percentual > 0.8 ? Colors.red : Colors.green,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Ocupação: $vagasOcupadas / $totalVagas vagas",
+                            style: TextStyle(
+                              fontSize: 12, 
+                              color: percentual > 0.8 ? Colors.red : Colors.green[700],
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => AdminParkingManagementScreen(
+                              estacionamentoId: doc.id,
+                              nomeEstacionamento: dados['nome'] ?? 'Estacionamento',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange[800],
-        child: const Icon(Icons.add, color: Colors.white),
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Funcionalidade futura: Cadastrar Novo Estacionamento")),
           );
         },
       ),
