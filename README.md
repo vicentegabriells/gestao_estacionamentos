@@ -7,6 +7,8 @@ Estudantes: **Larissa Borges Nascimento de Oliveira**, **Thiago Santana Santos**
 
 O **PIGE** é um aplicativo mobile e web construído em **Flutter** e **Firebase** que visa modernizar a experiência de gerenciamento e uso de estacionamentos.
 
+- OBS.: Projeto ainda em andamento.
+
 ### O Aplicativo
 
 O aplicativo oferece duas interfaces principais:
