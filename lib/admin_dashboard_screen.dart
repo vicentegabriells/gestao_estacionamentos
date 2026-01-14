@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_parking_management_screen.dart';
+import 'admin_add_parking_screen.dart'; // Importe a nova tela
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -14,7 +15,7 @@ class AdminDashboardScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
+        stream: FirebaseFirestore.instance.collection('estacionamentos').orderBy('criadoEm', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text('Erro ao carregar dados.'));
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -34,7 +35,6 @@ class AdminDashboardScreen extends StatelessWidget {
               var dados = doc.data() as Map<String, dynamic>;
 
               return StreamBuilder<QuerySnapshot>(
-                // Sub-stream para contar as vagas deste estacionamento específico
                 stream: FirebaseFirestore.instance
                     .collection('estacionamentos')
                     .doc(doc.id)
@@ -46,7 +46,6 @@ class AdminDashboardScreen extends StatelessWidget {
 
                   if (vagaSnapshot.hasData) {
                     totalVagas = vagaSnapshot.data!.docs.length;
-                    // Conta quantas vagas NÃO estão no status 'livre'
                     vagasOcupadas = vagaSnapshot.data!.docs
                         .where((v) => (v.data() as Map<String, dynamic>)['status'] != 'livre')
                         .length;
@@ -72,7 +71,6 @@ class AdminDashboardScreen extends StatelessWidget {
                         children: [
                           Text(dados['endereco'] ?? 'Sem Endereço'),
                           const SizedBox(height: 8),
-                          // Barra de progresso visual de ocupação
                           LinearProgressIndicator(
                             value: percentual,
                             backgroundColor: Colors.grey[200],
@@ -105,6 +103,18 @@ class AdminDashboardScreen extends StatelessWidget {
                 },
               );
             },
+          );
+        },
+      ),
+      // BOTÃO PARA ADICIONAR NOVO ESTACIONAMENTO
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.orange[800],
+        icon: const Icon(Icons.add_business, color: Colors.white),
+        label: const Text("Novo Estacionamento", style: TextStyle(color: Colors.white)),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminAddParkingScreen()),
           );
         },
       ),
