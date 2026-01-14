@@ -11,46 +11,84 @@ class AdminParkingManagementScreen extends StatelessWidget {
     required this.nomeEstacionamento,
   });
 
-  // Função para adicionar nova vaga
+  // Função para adicionar nova vaga com escolha de Tipo (Carro/Moto)
   void _adicionarVaga(BuildContext context) {
     final TextEditingController idVagaController = TextEditingController();
+    String tipoSelecionado = 'carro'; // Valor padrão
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Adicionar Nova Vaga"),
-        content: TextField(
-          controller: idVagaController,
-          decoration: const InputDecoration(
-            labelText: "Identificador (Ex: A-01)",
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            onPressed: () async {
-              if (idVagaController.text.trim().isNotEmpty) {
-                await FirebaseFirestore.instance
-                    .collection('estacionamentos')
-                    .doc(estacionamentoId)
-                    .collection('vagas')
-                    .add({
-                  'identificador': idVagaController.text.trim(),
-                  'status': 'livre',
-                  'tipo': 'comum',
-                });
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text("Adicionar"),
-          ),
-        ],
-      ),
+      builder: (context) {
+        // StatefulBuilder é necessário para atualizar o Dropdown dentro do Diálogo
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Adicionar Nova Vaga"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: idVagaController,
+                    decoration: const InputDecoration(
+                      labelText: "Identificador (Ex: A-01)",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text("Tipo de Veículo:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  DropdownButton<String>(
+                    value: tipoSelecionado,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'carro',
+                        child: Row(children: [Icon(Icons.directions_car), SizedBox(width: 10), Text('Carro')]),
+                      ),
+                      DropdownMenuItem(
+                        value: 'moto',
+                        child: Row(children: [Icon(Icons.two_wheeler), SizedBox(width: 10), Text('Moto')]),
+                      ),
+                    ],
+                    onChanged: (valor) {
+                      setState(() {
+                        tipoSelecionado = valor!;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (idVagaController.text.trim().isNotEmpty) {
+                      await FirebaseFirestore.instance
+                          .collection('estacionamentos')
+                          .doc(estacionamentoId)
+                          .collection('vagas')
+                          .add({
+                        'identificador': idVagaController.text.trim(),
+                        'status': 'livre',
+                        'tipo': tipoSelecionado, // Salva se é carro ou moto
+                        'criadoEm': FieldValue.serverTimestamp(),
+                      });
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                  child: const Text("Adicionar"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  // Função Multa (Mantida do seu código anterior)
+  // Função Multa (Mantida)
   void _abrirDialogoMulta(BuildContext context, String vagaId, String nomeVaga, String? usuarioId) {
     final TextEditingController justificativaController = TextEditingController();
     final TextEditingController valorController = TextEditingController();
@@ -82,7 +120,6 @@ class AdminParkingManagementScreen extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-               // Lógica simplificada de multa para manter compatibilidade
                double? valor = double.tryParse(valorController.text.replaceAll(',', '.'));
                if (valor != null && justificativaController.text.isNotEmpty) {
                  await FirebaseFirestore.instance.collection('multas').add({
@@ -96,6 +133,10 @@ class AdminParkingManagementScreen extends StatelessWidget {
                    'dataRegistro': FieldValue.serverTimestamp(),
                  });
                  if (context.mounted) Navigator.pop(context);
+                 
+                 ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Multa registrada com sucesso!"), backgroundColor: Colors.red),
+                 );
                }
             },
             child: const Text("Multar", style: TextStyle(color: Colors.white)),
@@ -131,7 +172,7 @@ class AdminParkingManagementScreen extends StatelessWidget {
             .collection('estacionamentos')
             .doc(estacionamentoId)
             .collection('vagas')
-            .orderBy('identificador') // Ordena por nome (A-01, A-02...)
+            .orderBy('identificador')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
@@ -154,11 +195,16 @@ class AdminParkingManagementScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               var vaga = vagas[index];
               var dados = vaga.data() as Map<String, dynamic>;
+              
               String status = dados['status'] ?? 'livre';
               String idVaga = dados['identificador'] ?? 'Vaga';
+              String tipo = dados['tipo'] ?? 'carro'; // Lê o tipo do banco
               String? usuarioId = dados['reservadaPor'];
 
               Color corVaga = status == 'livre' ? Colors.green : (status == 'reservada' ? Colors.orange : Colors.red);
+              
+              // Define o ícone com base no tipo cadastrado
+              IconData iconeVaga = tipo == 'moto' ? Icons.two_wheeler : Icons.directions_car;
 
               return Container(
                 decoration: BoxDecoration(
@@ -169,8 +215,14 @@ class AdminParkingManagementScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.directions_car, color: corVaga, size: 30),
+                    Icon(iconeVaga, color: corVaga, size: 30), // Ícone dinâmico
                     Text(idVaga, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    
+                    // Exibe texto pequeno indicando o tipo
+                    Text(tipo.toUpperCase(), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                    
+                    const SizedBox(height: 5),
+                    
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -192,7 +244,6 @@ class AdminParkingManagementScreen extends StatelessWidget {
           );
         },
       ),
-      // BOTÃO FLUTUANTE PARA ADICIONAR VAGA
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.orange[800],
         onPressed: () => _adicionarVaga(context),
