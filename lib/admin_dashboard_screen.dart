@@ -1,7 +1,7 @@
-//ainda em construção
-
-import 'package:flutter/material.dart'; // Importa o Flutter Material
-import 'package:cloud_firestore/cloud_firestore.dart'; // Importa o Firestore
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin_parking_management_screen.dart';
+import 'admin_add_parking_screen.dart'; // Garante que a tela de mapa seja importada
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -11,12 +11,11 @@ class AdminDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel do Administrador'),
-        backgroundColor: Colors.orange[800], // Cor diferente para diferenciar do app de motorista
+        backgroundColor: Colors.orange[800],
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Em um app real, filtraríamos por adminId: .where('adminId', isEqualTo: user.uid)
-        // Para o trabalho acadêmico, vamos listar todos para facilitar o teste
+        // CORREÇÃO: Removemos o orderBy('criadoEm') para exibir estacionamentos antigos
         stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text('Erro ao carregar dados.'));
@@ -36,38 +35,88 @@ class AdminDashboardScreen extends StatelessWidget {
               var doc = listaEstacionamentos[index];
               var dados = doc.data() as Map<String, dynamic>;
 
-              return Card(
-                elevation: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.orange[100],
-                    child: const Icon(Icons.business, color: Colors.orange),
-                  ),
-                  title: Text(
-                    dados['nome'] ?? 'Sem Nome',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(dados['endereco'] ?? 'Sem Endereço'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // AQUI: Futuramente vamos para a tela de "Gerenciar Vagas"
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Gerenciar: ${dados['nome']}")),
-                    );
-                  },
-                ),
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('estacionamentos')
+                    .doc(doc.id)
+                    .collection('vagas')
+                    .snapshots(),
+                builder: (context, vagaSnapshot) {
+                  int totalVagas = 0;
+                  int vagasOcupadas = 0;
+
+                  if (vagaSnapshot.hasData) {
+                    totalVagas = vagaSnapshot.data!.docs.length;
+                    vagasOcupadas = vagaSnapshot.data!.docs
+                        .where((v) => (v.data() as Map<String, dynamic>)['status'] != 'livre')
+                        .length;
+                  }
+
+                  double percentual = totalVagas > 0 ? (vagasOcupadas / totalVagas) : 0;
+
+                  return Card(
+                    elevation: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.orange[100],
+                        child: const Icon(Icons.business, color: Colors.orange),
+                      ),
+                      title: Text(
+                        dados['nome'] ?? 'Sem Nome',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(dados['endereco'] ?? 'Sem Endereço'),
+                          const SizedBox(height: 8),
+                          // Barra de Ocupação
+                          LinearProgressIndicator(
+                            value: percentual,
+                            backgroundColor: Colors.grey[200],
+                            color: percentual > 0.8 ? Colors.red : Colors.green,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Ocupação: $vagasOcupadas / $totalVagas vagas",
+                            style: TextStyle(
+                              fontSize: 12, 
+                              color: percentual > 0.8 ? Colors.red : Colors.green[700],
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => AdminParkingManagementScreen(
+                              estacionamentoId: doc.id,
+                              nomeEstacionamento: dados['nome'] ?? 'Estacionamento',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      // Botão Flutuante para Adicionar Novo Estacionamento
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.orange[800],
-        child: const Icon(Icons.add, color: Colors.white),
+        icon: const Icon(Icons.add_business, color: Colors.white),
+        label: const Text("Novo Estacionamento", style: TextStyle(color: Colors.white)),
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Funcionalidade futura: Cadastrar Novo Estacionamento")),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminAddParkingScreen()),
           );
         },
       ),
