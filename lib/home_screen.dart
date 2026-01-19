@@ -59,7 +59,7 @@ class _MapTabState extends State<MapTab> {
   Set<Marker> _markers = {};
 
   static const CameraPosition _posicaoInicial = CameraPosition(
-    target: LatLng(-10.9171, -37.6500), 
+    target: LatLng(-10.9171, -37.6500), // Lagarto/SE
     zoom: 14.0,
   );
 
@@ -102,7 +102,9 @@ class _MapTabState extends State<MapTab> {
           );
         }
       }
-      setState(() { _markers = novosMarcadores; });
+      if (mounted) {
+        setState(() { _markers = novosMarcadores; });
+      }
     });
   }
 
@@ -114,12 +116,14 @@ class _MapTabState extends State<MapTab> {
         initialCameraPosition: _posicaoInicial,
         onMapCreated: (controller) => _controller.complete(controller),
         markers: _markers,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: true,
       ),
     );
   }
 }
 
-// --- ABA DO PERFIL (CORRIGIDA) ---
+// --- ABA DO PERFIL ---
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
@@ -133,32 +137,60 @@ class ProfileTab extends StatelessWidget {
     }
   }
 
-  Future<void> _alternarPerfil(String uid, String tipoAtual) async {
-    String novoTipo = tipoAtual == 'admin' ? 'usuario' : 'admin';
-    await FirebaseFirestore.instance.collection('usuarios').doc(uid).update({
-      'tipoPerfil': novoTipo,
-    });
+  // Função de segurança para garantir que o perfil exista
+  Future<void> _garantirPerfil(String uid, String email) async {
+    final docRef = FirebaseFirestore.instance.collection('usuarios').doc(uid);
+    final doc = await docRef.get();
+    if (!doc.exists) {
+      await docRef.set({
+        'nome': 'Usuário',
+        'email': email,
+        'tipoPerfil': 'usuario',
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
 
+    if (user == null) {
+      return Center(
+        child: ElevatedButton(
+          onPressed: () => _signOut(context), 
+          child: const Text("Sessão expirada. Sair."),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Meu Perfil'), automaticallyImplyLeading: false),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('usuarios').doc(user?.uid).snapshots(),
+        stream: FirebaseFirestore.instance.collection('usuarios').doc(user.uid).snapshots(),
         builder: (context, snapshot) {
+          // 1. Carregando
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text("Erro ao carregar perfil."));
-          }
+          // 2. Dados Padrão (Fallback)
+          String nomeUsuario = user.displayName ?? 'Usuário';
+          String tipoPerfil = 'usuario';
+          String emailUsuario = user.email ?? '';
 
-          var dados = snapshot.data!.data() as Map<String, dynamic>;
-          String tipoPerfil = dados['tipoPerfil'] ?? 'usuario';
+          // 3. Verifica se existe no banco
+          if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+            try {
+              var dados = snapshot.data!.data() as Map<String, dynamic>;
+              nomeUsuario = dados['nome'] ?? nomeUsuario;
+              tipoPerfil = dados['tipoPerfil'] ?? tipoPerfil;
+            } catch (e) {
+              debugPrint("Erro ao ler dados: $e");
+            }
+          } else {
+            // Se não existe, cria silenciosamente
+            _garantirPerfil(user.uid, emailUsuario);
+          }
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -167,8 +199,18 @@ class ProfileTab extends StatelessWidget {
               children: [
                 const Center(child: CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50))),
                 const SizedBox(height: 20),
-                Text('Nome: ${dados['nome'] ?? 'Não informado'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text('E-mail: ${user?.email ?? 'Não informado'}'),
+                Text('Nome: $nomeUsuario', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('E-mail: $emailUsuario'),
+                
+                // Exibe o tipo de conta apenas como informação visual (Chip)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Chip(
+                    label: Text(tipoPerfil.toUpperCase(), style: const TextStyle(color: Colors.white)),
+                    backgroundColor: tipoPerfil == 'admin' ? Colors.orange[800] : Colors.blue[400],
+                  ),
+                ),
+                
                 const SizedBox(height: 30),
 
                 // Botão Minhas Reservas
@@ -184,7 +226,7 @@ class ProfileTab extends StatelessWidget {
 
                 const SizedBox(height: 15),
 
-                // BOTÃO DE ADMIN: Só aparece se tipoPerfil for 'admin'
+                // BOTÃO DE ADMIN: Só aparece se a conta for realmente admin
                 if (tipoPerfil == 'admin')
                   SizedBox(
                     width: double.infinity,
@@ -196,19 +238,9 @@ class ProfileTab extends StatelessWidget {
                     ),
                   ),
 
-                const Divider(height: 40),
-                const Text("Configurações", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text("Alternar tipo de conta"),
-                  subtitle: Text("Atual: ${tipoPerfil.toUpperCase()}"),
-                  trailing: const Icon(Icons.swap_horiz),
-                  onTap: () => _alternarPerfil(user!.uid, tipoPerfil),
-                ),
-
                 const Spacer(),
                 
+                // Botão Sair
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
