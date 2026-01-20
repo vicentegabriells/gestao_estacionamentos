@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // Importante para formatar a data do aviso
 
 class CheckoutScreen extends StatefulWidget {
   final DocumentSnapshot reserva;
@@ -11,116 +12,113 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  // Variáveis originais do seu código
   bool _carregando = true;
   double _valorEstadia = 0.0;
-  String _metodoPagamento = "Pix";
-  
-  // Novas variáveis para as Multas
   double _valorMultas = 0.0;
   List<Map<String, dynamic>> _listaMultas = [];
-  bool _calculandoMultas = true;
+  String _metodoPagamento = "Pix";
+  
+  // Variáveis para controle de tempo
+  late DateTime _dataInicio;
+  bool _podePagar = false;
 
   @override
   void initState() {
     super.initState();
-    _calcularPrecoEstadia();
-    _buscarMultasPendentes();
+    _verificarHorario();
+    _calcularTudo();
   }
 
-  // 1. Sua lógica original de cálculo da estadia (adaptada para funcionar com o restante)
-  Future<void> _calcularPrecoEstadia() async {
+  // --- NOVA FUNÇÃO: Verifica se já chegou a hora da reserva ---
+  void _verificarHorario() {
+    var dados = widget.reserva.data() as Map<String, dynamic>;
+    Timestamp inicio = dados['timestampInicio'];
+    _dataInicio = inicio.toDate();
+
+    // Regra: Só permite pagar se AGORA for DEPOIS do início da reserva
+    // Isso cobre "dia e hora certa" e também "reservas que já passaram"
+    if (DateTime.now().isAfter(_dataInicio)) {
+      _podePagar = true;
+    } else {
+      _podePagar = false;
+    }
+  }
+
+  Future<void> _calcularTudo() async {
     try {
       var dadosReserva = widget.reserva.data() as Map<String, dynamic>;
       String estacionamentoId = dadosReserva['estacionamentoId'];
+      String vagaId = dadosReserva['vagaId'];
 
-      // Busca dados do estacionamento para pegar a tarifa
+      // 1. Calcular Estadia
       DocumentSnapshot docEst = await FirebaseFirestore.instance
           .collection('estacionamentos')
           .doc(estacionamentoId)
           .get();
-
+      
+      double tarifa = 10.0;
       if (docEst.exists) {
-        var dadosEst = docEst.data() as Map<String, dynamic>;
-        // Assume 10.0 se não tiver tarifa cadastrada (ou usa a lógica que você já tinha)
-        double tarifaHora = (dadosEst['tarifas']?['hora'] ?? 10.0).toDouble();
-
-        Timestamp entrada = dadosReserva['timestampInicio'];
-        Timestamp saida = Timestamp.now(); // Hora atual como saída
-        
-        int minutos = saida.toDate().difference(entrada.toDate()).inMinutes;
-        double horas = minutos / 60.0;
-        
-        // Mínimo de 1 hora cobrada
-        if (horas < 1) horas = 1;
-
-        setState(() {
-          _valorEstadia = horas * tarifaHora;
-          _carregando = false;
-        });
+        tarifa = (docEst['tarifas']?['hora'] ?? 10.0).toDouble();
       }
-    } catch (e) {
-      setState(() { _carregando = false; });
-      debugPrint("Erro ao calcular estadia: $e");
-    }
-  }
 
-  // 2. Nova lógica para buscar multas daquela vaga
-  Future<void> _buscarMultasPendentes() async {
-    try {
-      var dadosReserva = widget.reserva.data() as Map<String, dynamic>;
-      String vagaId = dadosReserva['vagaId'];
+      Timestamp entrada = dadosReserva['timestampInicio'];
+      Timestamp saida = Timestamp.now();
+      
+      // Se tentar pagar antes (mesmo que bloqueado visualmente), o cálculo usa 1h mínima
+      int minutos = saida.toDate().difference(entrada.toDate()).inMinutes;
+      double horas = minutos / 60.0;
+      if (horas < 1) horas = 1; 
+      
+      double totalEstadia = horas * tarifa;
 
-      // Busca multas pendentes vinculadas a esta vaga
-      var snapshot = await FirebaseFirestore.instance
+      // 2. Buscar Multas
+      var snapshotMultas = await FirebaseFirestore.instance
           .collection('multas')
           .where('vagaId', isEqualTo: vagaId)
           .where('status', isEqualTo: 'pendente')
           .get();
 
       double totalMultas = 0;
-      List<Map<String, dynamic>> lista = [];
-
-      for (var doc in snapshot.docs) {
-        var dados = doc.data();
-        double valor = (dados['valor'] ?? 0.0).toDouble();
-        totalMultas += valor;
-        
-        lista.add({
-          'id': doc.id,
-          'justificativa': dados['justificativa'] ?? 'Infração',
-          'valor': valor,
-        });
+      List<Map<String, dynamic>> multas = [];
+      
+      for (var doc in snapshotMultas.docs) {
+        double v = (doc['valor'] ?? 0.0).toDouble();
+        totalMultas += v;
+        multas.add({'id': doc.id, 'motivo': doc['justificativa'], 'valor': v});
       }
 
-      setState(() {
-        _valorMultas = totalMultas;
-        _listaMultas = lista;
-        _calculandoMultas = false;
-      });
-
+      if (mounted) {
+        setState(() {
+          _valorEstadia = totalEstadia;
+          _valorMultas = totalMultas;
+          _listaMultas = multas;
+          _carregando = false;
+        });
+      }
     } catch (e) {
-      setState(() { _calculandoMultas = false; });
-      debugPrint("Erro ao buscar multas: $e");
+      debugPrint("Erro: $e");
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  // 3. Processar Pagamento (Estadia + Multas)
   Future<void> _processarPagamento() async {
-    setState(() => _carregando = true);
+    // Segurança extra: impede clique forçado
+    if (!_podePagar) return;
 
+    setState(() => _carregando = true);
     try {
+      double totalGeral = _valorEstadia + _valorMultas;
       var dadosReserva = widget.reserva.data() as Map<String, dynamic>;
-      
-      // A. Atualiza a Reserva para Concluída
+
+      // Atualiza Reserva
       await FirebaseFirestore.instance.collection('reservas').doc(widget.reserva.id).update({
         'status': 'concluida',
         'timestampFim': FieldValue.serverTimestamp(),
-        'valorTotal': _valorEstadia + _valorMultas,
+        'valorTotal': totalGeral,
         'metodoPagamento': _metodoPagamento,
       });
 
-      // B. Libera a Vaga
+      // Libera Vaga
       await FirebaseFirestore.instance
           .collection('estacionamentos')
           .doc(dadosReserva['estacionamentoId'])
@@ -131,120 +129,90 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'reservadaPor': FieldValue.delete(),
       });
 
-      // C. Baixa as Multas (se houver)
-      for (var multa in _listaMultas) {
-        await FirebaseFirestore.instance
-            .collection('multas')
-            .doc(multa['id'])
-            .update({'status': 'pago'});
+      // Baixa nas Multas
+      for (var m in _listaMultas) {
+        await FirebaseFirestore.instance.collection('multas').doc(m['id']).update({'status': 'pago'});
       }
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Pagamento realizado com sucesso!"), backgroundColor: Colors.green),
-      );
-      
-      // Volta para a home ou tela anterior
-      Navigator.of(context).pop();
-
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pagamento confirmado!"), backgroundColor: Colors.green));
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red),
-      );
-    } finally {
-      if (mounted) setState(() => _carregando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red));
+        setState(() => _carregando = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    double totalGeral = _valorEstadia + _valorMultas;
-    bool carregandoTudo = _carregando || _calculandoMultas;
+    double total = _valorEstadia + _valorMultas;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Checkout"),
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
-      ),
-      body: carregandoTudo
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- Card de Estadia ---
-                  const Text("Resumo da Estadia", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.timer, color: Colors.blue),
-                      title: const Text("Tempo utilizado"),
-                      // Aqui você pode melhorar a formatação do tempo se quiser
-                      trailing: Text("R\$ ${_valorEstadia.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                  ),
+      appBar: AppBar(title: const Text("Checkout"), backgroundColor: Colors.blue[800], foregroundColor: Colors.white),
+      body: _carregando ? const Center(child: CircularProgressIndicator()) : Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Resumo da Conta", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ListTile(title: const Text("Estadia (Tempo de uso)"), trailing: Text("R\$ ${_valorEstadia.toStringAsFixed(2)}")),
+            
+            if (_valorMultas > 0) ...[
+              const Divider(),
+              const Text("Infrações Pendentes", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              ..._listaMultas.map((m) => ListTile(
+                title: Text(m['motivo'], style: const TextStyle(color: Colors.red)),
+                trailing: Text("R\$ ${m['valor'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.red)),
+              )),
+            ],
+            
+            const Divider(),
+            ListTile(
+              title: const Text("TOTAL A PAGAR", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              trailing: Text("R\$ ${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green)),
+            ),
+            
+            const Spacer(),
 
-                  // --- Seção de Multas (Só aparece se tiver) ---
-                  if (_listaMultas.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    const Text("Infrações / Multas", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
-                    Card(
-                      color: Colors.red[50],
-                      child: Column(
-                        children: _listaMultas.map((multa) => ListTile(
-                          leading: const Icon(Icons.gavel, color: Colors.red),
-                          title: Text(multa['justificativa']),
-                          trailing: Text("R\$ ${multa['valor'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                        )).toList(),
+            // --- LÓGICA DO BOTÃO ---
+            if (_podePagar)
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _processarPagamento,
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  child: const Text("CONFIRMAR PAGAMENTO", style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  border: Border.all(color: Colors.orange),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.orange),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      // CORREÇÃO AQUI: 'às' entre aspas simples para ser texto literal
+                      child: Text(
+                        "O pagamento só será liberado a partir de:\n${DateFormat("dd/MM/yyyy 'às' HH:mm").format(_dataInicio)}",
+                        style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
-
-                  const SizedBox(height: 20),
-                  const Text("Forma de Pagamento", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  
-                  RadioListTile(
-                    title: const Text("Pix"),
-                    value: "Pix",
-                    groupValue: _metodoPagamento,
-                    onChanged: (v) => setState(() => _metodoPagamento = v.toString()),
-                    secondary: const Icon(Icons.qr_code),
-                  ),
-                  RadioListTile(
-                    title: const Text("Cartão de Crédito"),
-                    value: "Cartao",
-                    groupValue: _metodoPagamento,
-                    onChanged: (v) => setState(() => _metodoPagamento = v.toString()),
-                    secondary: const Icon(Icons.credit_card),
-                  ),
-
-                  const Spacer(),
-                  
-                  // --- Totalizador ---
-                  const Divider(thickness: 2),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("TOTAL A PAGAR:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text("R\$ ${totalGeral.toStringAsFixed(2)}", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _processarPagamento,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
-                      child: const Text("CONFIRMAR PAGAMENTO", style: TextStyle(color: Colors.white, fontSize: 18)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              )
+          ],
+        ),
+      ),
     );
   }
 }
