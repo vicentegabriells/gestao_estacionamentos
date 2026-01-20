@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin_financial_screen.dart';
 
 class AdminParkingManagementScreen extends StatelessWidget {
   final String estacionamentoId;
@@ -163,9 +164,26 @@ class AdminParkingManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(nomeEstacionamento),
+        title: Text("Gerenciar: $nomeEstacionamento"),
         backgroundColor: Colors.orange[800],
         foregroundColor: Colors.white,
+        actions: [
+          // --- NOVO BOTÃO DE RELATÓRIO ---
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Ver Faturamento',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => AdminFinancialScreen(
+                    estacionamentoId: estacionamentoId,
+                    nomeEstacionamento: nomeEstacionamento,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
