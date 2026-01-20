@@ -56,68 +56,64 @@ class MapTab extends StatefulWidget {
 
 class _MapTabState extends State<MapTab> {
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
-  Set<Marker> _markers = {};
-
+  
+  // --- ATUALIZAÇÃO: NOVAS COORDENADAS ---
   static const CameraPosition _posicaoInicial = CameraPosition(
-    target: LatLng(-10.9171, -37.6500), // Lagarto/SE
-    zoom: 14.0,
+    target: LatLng(-10.916377, -37.670540), // Centro atualizado
+    zoom: 15.0, // Aumentei um pouco o zoom para focar melhor na área
   );
-
-  @override
-  void initState() {
-    super.initState();
-    _carregarEstacionamentos();
-  }
-
-  Future<void> _carregarEstacionamentos() async {
-    FirebaseFirestore.instance
-        .collection('estacionamentos')
-        .get()
-        .then((querySnapshot) {
-      Set<Marker> novosMarcadores = {};
-      for (var doc in querySnapshot.docs) {
-        Map<String, dynamic> dados = doc.data();
-        if (dados.containsKey('localizacao')) {
-          GeoPoint ponto = dados['localizacao'];
-          novosMarcadores.add(
-            Marker(
-              markerId: MarkerId(doc.id),
-              position: LatLng(ponto.latitude, ponto.longitude),
-              infoWindow: InfoWindow(
-                title: dados['nome'] ?? 'Estacionamento',
-                snippet: dados['endereco'] ?? '',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ParkingDetailsScreen(
-                        estacionamentoId: doc.id,
-                        dadosEstacionamento: dados,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-            ),
-          );
-        }
-      }
-      if (mounted) {
-        setState(() { _markers = novosMarcadores; });
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Localizar Vagas'), backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
-      body: GoogleMap(
-        initialCameraPosition: _posicaoInicial,
-        onMapCreated: (controller) => _controller.complete(controller),
-        markers: _markers,
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
+      body: StreamBuilder<QuerySnapshot>(
+        // Mapa em tempo real
+        stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
+        builder: (context, snapshot) {
+          Set<Marker> markers = {};
+
+          if (snapshot.hasData) {
+            for (var doc in snapshot.data!.docs) {
+              var dados = doc.data() as Map<String, dynamic>;
+              if (dados.containsKey('localizacao')) {
+                GeoPoint p = dados['localizacao'];
+                markers.add(
+                  Marker(
+                    markerId: MarkerId(doc.id),
+                    position: LatLng(p.latitude, p.longitude),
+                    infoWindow: InfoWindow(
+                      title: dados['nome'],
+                      snippet: "Toque para ver detalhes",
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ParkingDetailsScreen(
+                              estacionamentoId: doc.id,
+                              dadosEstacionamento: dados,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }
+            }
+          }
+
+          return GoogleMap(
+            initialCameraPosition: _posicaoInicial,
+            onMapCreated: (controller) {
+              if (!_controller.isCompleted) {
+                _controller.complete(controller);
+              }
+            },
+            markers: markers,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+          );
+        },
       ),
     );
   }
@@ -168,17 +164,14 @@ class ProfileTab extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('usuarios').doc(user.uid).snapshots(),
         builder: (context, snapshot) {
-          // 1. Carregando
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // 2. Dados Padrão (Fallback)
           String nomeUsuario = user.displayName ?? 'Usuário';
           String tipoPerfil = 'usuario';
           String emailUsuario = user.email ?? '';
 
-          // 3. Verifica se existe no banco
           if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
             try {
               var dados = snapshot.data!.data() as Map<String, dynamic>;
@@ -188,7 +181,6 @@ class ProfileTab extends StatelessWidget {
               debugPrint("Erro ao ler dados: $e");
             }
           } else {
-            // Se não existe, cria silenciosamente
             _garantirPerfil(user.uid, emailUsuario);
           }
 
@@ -202,7 +194,6 @@ class ProfileTab extends StatelessWidget {
                 Text('Nome: $nomeUsuario', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 Text('E-mail: $emailUsuario'),
                 
-                // Exibe o tipo de conta apenas como informação visual (Chip)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Chip(
@@ -213,7 +204,6 @@ class ProfileTab extends StatelessWidget {
                 
                 const SizedBox(height: 30),
 
-                // Botão Minhas Reservas
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -226,7 +216,6 @@ class ProfileTab extends StatelessWidget {
 
                 const SizedBox(height: 15),
 
-                // BOTÃO DE ADMIN: Só aparece se a conta for realmente admin
                 if (tipoPerfil == 'admin')
                   SizedBox(
                     width: double.infinity,
@@ -240,7 +229,6 @@ class ProfileTab extends StatelessWidget {
 
                 const Spacer(),
                 
-                // Botão Sair
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(

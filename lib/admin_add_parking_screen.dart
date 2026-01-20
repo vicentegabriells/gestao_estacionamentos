@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importante para o Mapa
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AdminAddParkingScreen extends StatefulWidget {
   const AdminAddParkingScreen({super.key});
@@ -12,20 +12,16 @@ class AdminAddParkingScreen extends StatefulWidget {
 class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controladores de Texto
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _enderecoController = TextEditingController();
   final TextEditingController _precoController = TextEditingController();
 
-  // Variável para armazenar a posição escolhida no mapa
   LatLng? _localizacaoSelecionada;
-
   bool _isLoading = false;
 
   Future<void> _cadastrarEstacionamento() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validação extra para o Mapa
     if (_localizacaoSelecionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Por favor, selecione a localização no mapa!"), backgroundColor: Colors.red),
@@ -38,14 +34,12 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
     try {
       double precoHora = double.parse(_precoController.text.replaceAll(',', '.'));
 
-      // Cria o documento do estacionamento
       await FirebaseFirestore.instance.collection('estacionamentos').add({
         'nome': _nomeController.text.trim(),
         'endereco': _enderecoController.text.trim(),
         'tarifas': {
           'hora': precoHora,
         },
-        // Salva a Lat/Lng selecionada visualmente
         'localizacao': GeoPoint(_localizacaoSelecionada!.latitude, _localizacaoSelecionada!.longitude),
         'criadoEm': FieldValue.serverTimestamp(),
       });
@@ -54,7 +48,7 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Estacionamento criado com sucesso!"), backgroundColor: Colors.green),
         );
-        Navigator.pop(context); // Volta para o painel
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -67,7 +61,6 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
     }
   }
 
-  // Função que abre a tela de seleção de mapa
   void _abrirMapaSelecao() async {
     final resultado = await Navigator.push(
       context,
@@ -124,7 +117,6 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
               const Text("Localização no Mapa", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               
-              // Widget visual para mostrar se já selecionou ou não
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -137,7 +129,7 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
                     if (_localizacaoSelecionada != null) ...[
                       const Icon(Icons.location_on, color: Colors.green, size: 40),
                       Text(
-                        "Localização Definida:\nLat: ${_localizacaoSelecionada!.latitude.toStringAsFixed(4)}\nLng: ${_localizacaoSelecionada!.longitude.toStringAsFixed(4)}",
+                        "Lat: ${_localizacaoSelecionada!.latitude.toStringAsFixed(4)}\nLng: ${_localizacaoSelecionada!.longitude.toStringAsFixed(4)}",
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
@@ -179,7 +171,7 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
   }
 }
 
-// --- TELA SECUNDÁRIA: SELETOR DE MAPA ---
+// --- TELA DE MAPA ---
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
 
@@ -188,8 +180,8 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  // Ponto inicial (Lagarto/SE) - Pode ser ajustado
-  static const LatLng _center = LatLng(-10.9171, -37.6500);
+  // --- ATUALIZAÇÃO: NOVAS COORDENADAS ---
+  static const LatLng _center = LatLng(-10.916377, -37.670540); 
   LatLng? _pickedLocation;
 
   void _onMapTap(LatLng position) {
@@ -217,7 +209,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           GoogleMap(
             initialCameraPosition: const CameraPosition(
               target: _center,
-              zoom: 14.0,
+              zoom: 15.0, // Zoom ajustado
             ),
             onTap: _onMapTap,
             markers: _pickedLocation == null 
@@ -252,7 +244,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 color: Colors.black54,
                 padding: const EdgeInsets.all(8),
                 child: const Text(
-                  "Toque no mapa para definir a posição do estacionamento",
+                  "Toque no mapa para definir a posição",
                   style: TextStyle(color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
