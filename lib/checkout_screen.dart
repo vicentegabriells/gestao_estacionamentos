@@ -201,7 +201,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const Icon(Icons.access_time, color: Colors.orange),
                     const SizedBox(width: 10),
                     Expanded(
-                      // CORREÇÃO AQUI: 'às' entre aspas simples para ser texto literal
                       child: Text(
                         "O pagamento só será liberado a partir de:\n${DateFormat("dd/MM/yyyy 'às' HH:mm").format(_dataInicio)}",
                         style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
