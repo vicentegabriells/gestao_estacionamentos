@@ -3,7 +3,7 @@
 ## 📝 Sobre o Projeto
 
 Este é um projeto desenvolvido para a disciplina de **Programação para Dispositivos Móveis**, solicitada pelo **Professor Jean Louis**.
-Estudantes: **Larissa Borges Nascimento de Oliveira**, **Thiago Santana Santos** e **Vicente Gabriel Loiola Souza**. *IFS-Campus Lagarto*.
+Estudantes: **Larissa Borges Nascimento de Oliveira**, **Thiago Santana Santos** e **Vicente Gabriel Loiola Souza**. *IFS - Campus Lagarto*.
 
 O **PIGE** é um aplicativo mobile e web construído em **Flutter** e **Firebase** que visa modernizar a experiência de gerenciamento e uso de estacionamentos.
 
