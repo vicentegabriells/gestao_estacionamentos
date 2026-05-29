@@ -24,6 +24,7 @@ Para rodar este projeto em sua máquina local, você precisará ter o ambiente d
 * **Flutter SDK (Versão 3.x ou superior):** Framework principal de desenvolvimento.
 * **IDE (VS Code ou Android Studio):** Recomendamos o VS Code com a extensão Dart e Flutter.
 * **Firebase CLI (Command Line Interface):** Necessário para gerenciar o projeto Firebase e a configuração local.
+* **API de mapa**: preferencialmente o Google Maps.
 
 ### 2. Instalação de Dependências
 
