@@ -46,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- ABA DO MAPA ---
 class MapTab extends StatefulWidget {
   const MapTab({super.key});
 
@@ -57,10 +56,9 @@ class MapTab extends StatefulWidget {
 class _MapTabState extends State<MapTab> {
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   
-  // --- ATUALIZAÇÃO: NOVAS COORDENADAS ---
   static const CameraPosition _posicaoInicial = CameraPosition(
-    target: LatLng(-10.916377, -37.670540), // Centro atualizado
-    zoom: 15.0, // Aumentei um pouco o zoom para focar melhor na área
+    target: LatLng(-10.916377, -37.670540), 
+    zoom: 15.0,
   );
 
   @override
@@ -68,7 +66,7 @@ class _MapTabState extends State<MapTab> {
     return Scaffold(
       appBar: AppBar(title: const Text('Localizar Vagas'), backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
       body: StreamBuilder<QuerySnapshot>(
-        // Mapa em tempo real
+        
         stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
         builder: (context, snapshot) {
           Set<Marker> markers = {};
@@ -119,7 +117,6 @@ class _MapTabState extends State<MapTab> {
   }
 }
 
-// --- ABA DO PERFIL ---
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
@@ -133,7 +130,6 @@ class ProfileTab extends StatelessWidget {
     }
   }
 
-  // Função de segurança para garantir que o perfil exista
   Future<void> _garantirPerfil(String uid, String email) async {
     final docRef = FirebaseFirestore.instance.collection('usuarios').doc(uid);
     final doc = await docRef.get();

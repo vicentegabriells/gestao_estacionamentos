@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:url_launcher/url_launcher.dart'; // Para abrir o GPS (Traçar Rota)
+import 'package:url_launcher/url_launcher.dart'; 
 
-// Widget sem estado para exibir detalhes do estacionamento
 class ParkingDetailsScreen extends StatelessWidget {
-  final String estacionamentoId; // ID do documento na coleção 'estacionamentos'
-  final Map<String, dynamic> dadosEstacionamento; // Dados do estacionamento
+  final String estacionamentoId; 
+  final Map<String, dynamic> dadosEstacionamento; 
 
   const ParkingDetailsScreen({
     super.key,
@@ -14,7 +13,6 @@ class ParkingDetailsScreen extends StatelessWidget {
     required this.dadosEstacionamento,
   });
 
-  // Função para abrir o GPS externo
   Future<void> _abrirMapa(BuildContext context) async {
     GeoPoint? ponto = dadosEstacionamento['localizacao'];
 
@@ -42,12 +40,9 @@ class ParkingDetailsScreen extends StatelessWidget {
     }
   }
 
-  // Função para realizar a reserva INTELIGENTE (Agendamento com Conflito)
   Future<void> _confirmarReserva(BuildContext context, String vagaId, String nomeVaga, String statusAtual) async {
     DateTime agora = DateTime.now();
     
-    // 1. Seleção de DATA, HORA DE ENTRADA e HORA DE SAÍDA
-    // (Usa showDatePicker e showTimePicker para coletar os 3 dados)
     DateTime? dataSelecionada = await showDatePicker(
       context: context,
       initialDate: agora,
@@ -71,7 +66,6 @@ class ParkingDetailsScreen extends StatelessWidget {
     );
     if (horaSaida == null || !context.mounted) return;
 
-    // 2. Monta os objetos DateTime completos (Essencial para a comparação matemática)
     final DateTime inicioDesejado = DateTime(
       dataSelecionada.year, dataSelecionada.month, dataSelecionada.day,
       horaEntrada.hour, horaEntrada.minute
@@ -86,9 +80,7 @@ class ParkingDetailsScreen extends StatelessWidget {
       return;
     }
 
-    // 3. VERIFICAR CONFLITOS NO BANCO
     try {
-      // Busca TODAS as reservas ATIVAS para esta VAGA específica (Query mais importante)
       QuerySnapshot reservasExistentes = await FirebaseFirestore.instance
           .collection('reservas')
           .where('estacionamentoId', isEqualTo: estacionamentoId)
@@ -97,7 +89,7 @@ class ParkingDetailsScreen extends StatelessWidget {
           .get();
 
       bool temConflito = false;
-      // a algum período existente. Esta lógica permite múltiplas reservas não conflitantes.)
+
       for (var doc in reservasExistentes.docs) {
         Map<String, dynamic> dados = doc.data() as Map<String, dynamic>;
         Timestamp? inicioExistenteTs = dados['timestampInicio'];
@@ -118,7 +110,6 @@ class ParkingDetailsScreen extends StatelessWidget {
         return;
       }
 
-      // 4. CONFIRMAÇÃO
       String dataTexto = "${dataSelecionada.day}/${dataSelecionada.month}";
       String horaTexto = "${horaEntrada.format(context)} - ${horaSaida.format(context)}";
 
@@ -136,11 +127,9 @@ class ParkingDetailsScreen extends StatelessWidget {
 
       if (confirmar != true) return;
 
-      // 5. SALVAR NO FIREBASE
       String userId = FirebaseAuth.instance.currentUser!.uid;
       bool ehParaAgora = inicioDesejado.difference(DateTime.now()).inMinutes.abs() < 15;
 
-      // Só muda o status físico da vaga se for PARA AGORA e ela estiver LIVRE
       if (ehParaAgora && statusAtual == 'livre') {
         await FirebaseFirestore.instance
             .collection('estacionamentos')
@@ -157,35 +146,30 @@ class ParkingDetailsScreen extends StatelessWidget {
         }
       }
 
-      // Salvamos a reserva com os Timestamps para podermos comparar depois
       await FirebaseFirestore.instance.collection('reservas').add({
-        // --- INÍCIO: REGISTRO NO BANCO DE DADOS (Firestore) ---
-        
-        // Dados de Identificação e Relacionamento (Chaves para o sistema)
+       
         'usuarioId': userId,
         'estacionamentoId': estacionamentoId,
         'vagaId': vagaId,
-        // Dados Visuais e de Auditoria
         'nomeEstacionamento': dadosEstacionamento['nome'],
         'nomeVaga': nomeVaga,
         'dataHoraInicio': FieldValue.serverTimestamp(),
         'status': 'ativa',
-        // Dados do Agendamento
+
         'timestampInicio': Timestamp.fromDate(inicioDesejado),
         'timestampFim': Timestamp.fromDate(fimDesejado),
-        // Dados de UI: Salvos em formato de texto (String) para exibição direta na tela
+
         'agendamentoData': "${dataSelecionada.day}/${dataSelecionada.month}/${dataSelecionada.year}",
         'agendamentoEntrada': "${horaEntrada.hour}:${horaEntrada.minute.toString().padLeft(2, '0')}",
         'agendamentoSaida': "${horaSaida.hour}:${horaSaida.minute.toString().padLeft(2, '0')}",
 
-        // --- FIM: REGISTRO NO BANCO DE DADOS (Firestore) ---
       });
 
-      if (context.mounted) { // Verifica se o contexto ainda está montado antes de mostrar o SnackBar
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agendamento realizado!"), backgroundColor: Colors.green));
       }
 
-    } catch (e) { // Tratamento de erros
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red));
       }
@@ -193,7 +177,7 @@ class ParkingDetailsScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) { // Construção da interface do usuário
+  Widget build(BuildContext context) { 
     return Scaffold(
       appBar: AppBar(
         title: Text(dadosEstacionamento['nome'] ?? 'Detalhes'),
@@ -203,7 +187,7 @@ class ParkingDetailsScreen extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- CABEÇALHO ---
+        
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.blue[50],
@@ -219,7 +203,7 @@ class ParkingDetailsScreen extends StatelessWidget {
 
                 const SizedBox(height: 15),
 
-                // Botão de Navegar (Agora dentro da lista children corretamente)
+                
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -301,7 +285,7 @@ class ParkingDetailsScreen extends StatelessWidget {
                                const SnackBar(content: Text("Você já tem essa vaga reservada agora!"))
                              );
                           } else {
-                            // Passamos o status atual
+                           
                             _confirmarReserva(context, vaga.id, nomeVaga, status);
                           }
                         },

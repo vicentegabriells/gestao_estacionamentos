@@ -12,15 +12,15 @@ class AdminParkingManagementScreen extends StatelessWidget {
     required this.nomeEstacionamento,
   });
 
-  // Função para adicionar nova vaga com escolha de Tipo (Carro/Moto)
+ 
   void _adicionarVaga(BuildContext context) {
     final TextEditingController idVagaController = TextEditingController();
-    String tipoSelecionado = 'carro'; // Valor padrão
+    String tipoSelecionado = 'carro'; 
 
     showDialog(
       context: context,
       builder: (context) {
-        // StatefulBuilder é necessário para atualizar o Dropdown dentro do Diálogo
+       
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -73,7 +73,7 @@ class AdminParkingManagementScreen extends StatelessWidget {
                           .add({
                         'identificador': idVagaController.text.trim(),
                         'status': 'livre',
-                        'tipo': tipoSelecionado, // Salva se é carro ou moto
+                        'tipo': tipoSelecionado, 
                         'criadoEm': FieldValue.serverTimestamp(),
                       });
                       if (context.mounted) Navigator.pop(context);
@@ -89,7 +89,6 @@ class AdminParkingManagementScreen extends StatelessWidget {
     );
   }
 
-  // Função Multa (Mantida)
   void _abrirDialogoMulta(BuildContext context, String vagaId, String nomeVaga, String? usuarioId) {
     final TextEditingController justificativaController = TextEditingController();
     final TextEditingController valorController = TextEditingController();
@@ -168,7 +167,6 @@ class AdminParkingManagementScreen extends StatelessWidget {
         backgroundColor: Colors.orange[800],
         foregroundColor: Colors.white,
         actions: [
-          // --- NOVO BOTÃO DE RELATÓRIO ---
           IconButton(
             icon: const Icon(Icons.bar_chart),
             tooltip: 'Ver Faturamento',
@@ -216,12 +214,11 @@ class AdminParkingManagementScreen extends StatelessWidget {
               
               String status = dados['status'] ?? 'livre';
               String idVaga = dados['identificador'] ?? 'Vaga';
-              String tipo = dados['tipo'] ?? 'carro'; // Lê o tipo do banco
+              String tipo = dados['tipo'] ?? 'carro'; 
               String? usuarioId = dados['reservadaPor'];
 
               Color corVaga = status == 'livre' ? Colors.green : (status == 'reservada' ? Colors.orange : Colors.red);
-              
-              // Define o ícone com base no tipo cadastrado
+             
               IconData iconeVaga = tipo == 'moto' ? Icons.two_wheeler : Icons.directions_car;
 
               return Container(
@@ -233,10 +230,9 @@ class AdminParkingManagementScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(iconeVaga, color: corVaga, size: 30), // Ícone dinâmico
+                    Icon(iconeVaga, color: corVaga, size: 30), 
                     Text(idVaga, style: const TextStyle(fontWeight: FontWeight.bold)),
                     
-                    // Exibe texto pequeno indicando o tipo
                     Text(tipo.toUpperCase(), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                     
                     const SizedBox(height: 5),

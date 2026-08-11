@@ -1,7 +1,7 @@
-import 'home_screen.dart';// Importe a tela principal após o login
-import 'package:flutter/material.dart'; // Importa o Flutter Material
-import 'package:firebase_auth/firebase_auth.dart'; // Importa o Firebase Auth
-import 'registration_screen.dart'; // Importe a tela de cadastro para poder navegar até ela
+import 'home_screen.dart';
+import 'package:flutter/material.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'registration_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,35 +11,34 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Controladores de texto
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
 
-  // Função de Login
+
   Future<void> _loginUser() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Tenta fazer o login no Firebase
+
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-    // Se não der erro, o login funcionou!
     if (mounted) {
-        // Navega para a Tela Principal e remove a tela de Login da "pilha" (para não voltar ao login se apertar 'voltar')
+
         Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
     }
 
     } on FirebaseAuthException catch (e) {
-      // Tratamento de erros comuns de login
+
       String errorMessage = 'Erro ao fazer login.';
       
       if (e.code == 'user-not-found') {
@@ -71,12 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(title: const Text('Entrar no Sistema')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Center( // Centraliza o conteúdo
-          child: SingleChildScrollView( // Permite rolar a tela em celulares pequenos
+        child: Center( 
+          child: SingleChildScrollView( 
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo ou Ícone (Opcional)
+
                 const Icon(Icons.local_parking, size: 100, color: Colors.blue),
                 const SizedBox(height: 20),
                 const Text(
@@ -85,7 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Campo de E-mail
                 TextField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -97,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Campo de Senha
                 TextField(
                   controller: _passwordController,
                   decoration: const InputDecoration(
@@ -109,9 +106,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Botão de Entrar
                 SizedBox(
-                  width: double.infinity, // Botão ocupa toda a largura
+                  width: double.infinity, 
                   height: 50,
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -122,14 +118,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Link para criar conta
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('Não tem uma conta?'),
                     TextButton(
                       onPressed: () {
-                        // Navega para a tela de cadastro
+
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const RegistrationScreen(),

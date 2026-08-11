@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // Importante para formatar a data do aviso
+import 'package:intl/intl.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final DocumentSnapshot reserva;
@@ -18,7 +18,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Map<String, dynamic>> _listaMultas = [];
   String _metodoPagamento = "Pix";
   
-  // Variáveis para controle de tempo
   late DateTime _dataInicio;
   bool _podePagar = false;
 
@@ -29,14 +28,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _calcularTudo();
   }
 
-  // --- NOVA FUNÇÃO: Verifica se já chegou a hora da reserva ---
   void _verificarHorario() {
     var dados = widget.reserva.data() as Map<String, dynamic>;
     Timestamp inicio = dados['timestampInicio'];
     _dataInicio = inicio.toDate();
 
-    // Regra: Só permite pagar se AGORA for DEPOIS do início da reserva
-    // Isso cobre "dia e hora certa" e também "reservas que já passaram"
     if (DateTime.now().isAfter(_dataInicio)) {
       _podePagar = true;
     } else {
@@ -50,7 +46,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       String estacionamentoId = dadosReserva['estacionamentoId'];
       String vagaId = dadosReserva['vagaId'];
 
-      // 1. Calcular Estadia
       DocumentSnapshot docEst = await FirebaseFirestore.instance
           .collection('estacionamentos')
           .doc(estacionamentoId)
@@ -64,14 +59,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       Timestamp entrada = dadosReserva['timestampInicio'];
       Timestamp saida = Timestamp.now();
       
-      // Se tentar pagar antes (mesmo que bloqueado visualmente), o cálculo usa 1h mínima
       int minutos = saida.toDate().difference(entrada.toDate()).inMinutes;
       double horas = minutos / 60.0;
       if (horas < 1) horas = 1; 
       
       double totalEstadia = horas * tarifa;
 
-      // 2. Buscar Multas
       var snapshotMultas = await FirebaseFirestore.instance
           .collection('multas')
           .where('vagaId', isEqualTo: vagaId)
@@ -102,7 +95,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _processarPagamento() async {
-    // Segurança extra: impede clique forçado
+
     if (!_podePagar) return;
 
     setState(() => _carregando = true);
@@ -110,7 +103,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       double totalGeral = _valorEstadia + _valorMultas;
       var dadosReserva = widget.reserva.data() as Map<String, dynamic>;
 
-      // Atualiza Reserva
       await FirebaseFirestore.instance.collection('reservas').doc(widget.reserva.id).update({
         'status': 'concluida',
         'timestampFim': FieldValue.serverTimestamp(),
@@ -118,7 +110,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'metodoPagamento': _metodoPagamento,
       });
 
-      // Libera Vaga
       await FirebaseFirestore.instance
           .collection('estacionamentos')
           .doc(dadosReserva['estacionamentoId'])
@@ -129,7 +120,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'reservadaPor': FieldValue.delete(),
       });
 
-      // Baixa nas Multas
       for (var m in _listaMultas) {
         await FirebaseFirestore.instance.collection('multas').doc(m['id']).update({'status': 'pago'});
       }
@@ -177,7 +167,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             
             const Spacer(),
 
-            // --- LÓGICA DO BOTÃO ---
             if (_podePagar)
               SizedBox(
                 width: double.infinity,

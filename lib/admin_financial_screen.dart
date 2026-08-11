@@ -41,7 +41,7 @@ class AdminFinancialScreen extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('reservas')
                   .where('estacionamentoId', isEqualTo: estacionamentoId)
-                  .where('status', isEqualTo: 'concluida') // Lista apenas reservas pagas
+                  .where('status', isEqualTo: 'concluida') 
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -55,7 +55,7 @@ class AdminFinancialScreen extends StatelessWidget {
                 var reservas = snapshot.data!.docs;
                 double faturamentoTotal = 0;
 
-                // Calcula o total somando o campo 'valorTotal' de cada reserva
+               
                 for (var doc in reservas) {
                   var dados = doc.data() as Map<String, dynamic>;
                   faturamentoTotal += (dados['valorTotal'] ?? 0.0).toDouble();
@@ -63,7 +63,7 @@ class AdminFinancialScreen extends StatelessWidget {
 
                 return Column(
                   children: [
-                    // Card do Valor Total
+                    
                     Card(
                       margin: const EdgeInsets.all(16),
                       elevation: 8,
@@ -89,7 +89,6 @@ class AdminFinancialScreen extends StatelessWidget {
                       child: Align(alignment: Alignment.centerLeft, child: Text("Histórico de Pagamentos:", style: TextStyle(fontWeight: FontWeight.bold))),
                     ),
 
-                    // Lista detalhada
                     Expanded(
                       child: ListView.builder(
                         itemCount: reservas.length,

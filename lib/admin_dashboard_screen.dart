@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_parking_management_screen.dart';
-import 'admin_add_parking_screen.dart'; // Garante que a tela de mapa seja importada
+import 'admin_add_parking_screen.dart'; 
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -15,7 +15,7 @@ class AdminDashboardScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // CORREÇÃO: Removemos o orderBy('criadoEm') para exibir estacionamentos antigos
+        
         stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text('Erro ao carregar dados.'));
@@ -72,7 +72,7 @@ class AdminDashboardScreen extends StatelessWidget {
                         children: [
                           Text(dados['endereco'] ?? 'Sem Endereço'),
                           const SizedBox(height: 8),
-                          // Barra de Ocupação
+                        
                           LinearProgressIndicator(
                             value: percentual,
                             backgroundColor: Colors.grey[200],
@@ -108,7 +108,6 @@ class AdminDashboardScreen extends StatelessWidget {
           );
         },
       ),
-      // Botão Flutuante para Adicionar Novo Estacionamento
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.orange[800],
         icon: const Icon(Icons.add_business, color: Colors.white),

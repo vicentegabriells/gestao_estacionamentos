@@ -16,7 +16,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // Variável para armazenar o tipo de perfil selecionado
   String _tipoPerfilSelecionado = 'usuario'; 
   bool _isLoading = false;
 
@@ -37,13 +36,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
 
       String userId = userCredential.user!.uid; 
-      
-      // Salva o perfil escolhido no momento do cadastro
+   
       await FirebaseFirestore.instance.collection('usuarios').doc(userId).set({
         'nome': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'telefone': _phoneController.text.trim(),
-        'tipoPerfil': _tipoPerfilSelecionado, // 'usuario' ou 'admin'
+        'tipoPerfil': _tipoPerfilSelecionado, 
       });
 
       if (mounted) {
@@ -75,7 +73,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             TextField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Celular', border: OutlineInputBorder()), keyboardType: TextInputType.phone),
             const SizedBox(height: 16),
             
-            // NOVO: Seleção de Tipo de Perfil
             DropdownButtonFormField<String>(
               value: _tipoPerfilSelecionado,
               decoration: const InputDecoration(labelText: 'Tipo de Conta', border: OutlineInputBorder()),

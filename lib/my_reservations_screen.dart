@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart'; // Flutter Framework
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firebase Firestore
-import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth
-import 'checkout_screen.dart'; // Tela de Checkout
+import 'package:flutter/material.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'checkout_screen.dart'; 
 
 class MyReservationsScreen extends StatelessWidget {
   const MyReservationsScreen({super.key});
 
-  // Função para CANCELAR (Mantida igual)
   Future<void> _cancelarReserva(BuildContext context, String reservaId, String estacionamentoId, String vagaId) async {
     bool? confirmar = await showDialog<bool>(
       context: context,
@@ -22,7 +21,7 @@ class MyReservationsScreen extends StatelessWidget {
 
     if (confirmar != true) return;
 
-    try { // Atualiza o status da reserva para 'cancelada' e libera a vaga
+    try {
       await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({'status': 'cancelada'});
       await FirebaseFirestore.instance.collection('estacionamentos').doc(estacionamentoId).collection('vagas').doc(vagaId).update({
         'status': 'livre',
@@ -34,11 +33,9 @@ class MyReservationsScreen extends StatelessWidget {
     }
   }
 
-  // --- NOVA FUNÇÃO: EDITAR RESERVA ---
   Future<void> _editarReserva(BuildContext context, DocumentSnapshot docReserva) async {
     var dados = docReserva.data() as Map<String, dynamic>;
     
-    // Recupera os dados atuais para preencher o calendário
     Timestamp inicioAtualTs = dados['timestampInicio'] ?? Timestamp.now();
     DateTime dataAtual = inicioAtualTs.toDate();
     TimeOfDay entradaAtual = TimeOfDay.fromDateTime(dataAtual);
@@ -48,22 +45,21 @@ class MyReservationsScreen extends StatelessWidget {
 
     DateTime agora = DateTime.now();
 
-    // 1. SELETORES (Já iniciam com a data da reserva)
     DateTime? novaData = await showDatePicker(
       context: context,
-      initialDate: dataAtual.isBefore(agora) ? agora : dataAtual, // Se for antiga, põe hoje
+      initialDate: dataAtual.isBefore(agora) ? agora : dataAtual,
       firstDate: agora,
       lastDate: agora.add(const Duration(days: 30)),
       helpText: "EDITAR DATA",
     );
-    if (novaData == null || !context.mounted) return; // Usuário cancelou
+    if (novaData == null || !context.mounted) return; 
 
     TimeOfDay? novaEntrada = await showTimePicker(
       context: context,
       initialTime: entradaAtual,
       helpText: "NOVA CHEGADA",
     );
-    if (novaEntrada == null || !context.mounted) return; // Usuário cancelou
+    if (novaEntrada == null || !context.mounted) return;
 
     TimeOfDay? novaSaida = await showTimePicker(
       context: context,
@@ -72,21 +68,19 @@ class MyReservationsScreen extends StatelessWidget {
     );
     if (novaSaida == null || !context.mounted) return;
 
-    // 2. MONTAR NOVOS DATETIMES
     final DateTime novoInicio = DateTime(novaData.year, novaData.month, novaData.day, novaEntrada.hour, novaEntrada.minute);
     final DateTime novoFim = DateTime(novaData.year, novaData.month, novaData.day, novaSaida.hour, novaSaida.minute);
 
-    if (novoFim.isBefore(novoInicio)) { // Validação básica
+    if (novoFim.isBefore(novoInicio)) { 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saída deve ser depois da entrada!"), backgroundColor: Colors.red));
       return;
     }
 
-    // 3. VERIFICAR CONFLITOS (Ignorando a própria reserva!)
     try {
       String estacionamentoId = dados['estacionamentoId'];
       String vagaId = dados['vagaId'];
 
-      QuerySnapshot conflitos = await FirebaseFirestore.instance // Verifica conflitos de horário
+      QuerySnapshot conflitos = await FirebaseFirestore.instance
           .collection('reservas')
           .where('estacionamentoId', isEqualTo: estacionamentoId)
           .where('vagaId', isEqualTo: vagaId)
@@ -95,14 +89,14 @@ class MyReservationsScreen extends StatelessWidget {
 
       bool temConflito = false;
       for (var doc in conflitos.docs) {
-        // PULO DO GATO: Se for a mesma reserva que estou editando, ignora!
+
         if (doc.id == docReserva.id) continue; 
 
         var d = doc.data() as Map<String, dynamic>;
         Timestamp? i = d['timestampInicio'];
         Timestamp? f = d['timestampFim'];
 
-        if (i != null && f != null) { // Verifica sobreposição
+        if (i != null && f != null) { 
           if (novoInicio.isBefore(f.toDate()) && novoFim.isAfter(i.toDate())) {
             temConflito = true;
             break;
@@ -110,12 +104,11 @@ class MyReservationsScreen extends StatelessWidget {
         }
       }
 
-      if (temConflito) { // Avisar usuário e sair
+      if (temConflito) {
         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Horário indisponível!"), backgroundColor: Colors.orange));
         return;
       }
 
-      // 4. ATUALIZAR NO FIREBASE
       await FirebaseFirestore.instance.collection('reservas').doc(docReserva.id).update({
         'timestampInicio': Timestamp.fromDate(novoInicio),
         'timestampFim': Timestamp.fromDate(novoFim),
@@ -125,14 +118,14 @@ class MyReservationsScreen extends StatelessWidget {
       });
 
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva atualizada!"), backgroundColor: Colors.green));
-      // FIM DA FUNÇÃO
-    } catch (e) { // Tratamento de erros
+
+    } catch (e) { 
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
     }
   }
 
   @override
-  Widget build(BuildContext context) { // Construção da interface do usuário
+  Widget build(BuildContext context) { 
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return DefaultTabController(
@@ -289,12 +282,12 @@ class MyReservationsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              // AQUI ESTÃO OS BOTÕES DE AÇÃO
+             
               trailing: permiteEdicao
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // BOTÃO PAGAR (NOVO!)
+                        
                         IconButton(
                           icon: const Icon(Icons.payments, color: Colors.green),
                           onPressed: () {
@@ -308,14 +301,14 @@ class MyReservationsScreen extends StatelessWidget {
                           tooltip: "Pagar agora",
                         ),
                         
-                        // BOTÃO EDITAR
+                       
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.blueAccent),
                           onPressed: () => _editarReserva(context, reserva),
                           tooltip: "Editar",
                         ),
                         
-                        // BOTÃO CANCELAR
+                       
                         IconButton(
                           icon: const Icon(Icons.cancel, color: Colors.redAccent),
                           onPressed: () => _cancelarReserva(context, reserva.id, dados['estacionamentoId'], dados['vagaId']),
