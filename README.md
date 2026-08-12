@@ -2,7 +2,8 @@
 
 ## 📝 Sobre o Projeto
 
-O **PIGE** é um aplicativo mobile construído em **Flutter** e **Firebase** que visa modernizar a experiência de gerenciamento e uso de estacionamentos.
+O **PIGE** é um aplicativo mobile construído em **Flutter** e **Firebase** que visa modernizar a experiência de gerenciamento e uso de estacionamentos.\
+Estudantes: **Larissa Borges Nascimento de Oliveira**, **Thiago Santana Santos** e **Vicente Gabriel Loiola Souza**. *IFS-Campus Lagarto*.
 
 - OBS.: Projeto ainda em andamento.
 
