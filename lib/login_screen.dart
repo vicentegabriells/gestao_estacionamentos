@@ -1,143 +1,278 @@
-import 'home_screen.dart';
-import 'package:flutter/material.dart'; 
-import 'package:firebase_auth/firebase_auth.dart'; 
-import 'registration_screen.dart'; 
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gestao_estacionamentos/constants/app_colors.dart';
+import 'package:gestao_estacionamentos/home_screen.dart';
+import 'package:gestao_estacionamentos/registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
+  
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
-  Future<void> _loginUser() async {
+  void _showSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : AppColors.primaryDark,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showSnackBar('Por favor, preencha todos os campos.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        email: email,
+        password: password,
       );
-
-    if (mounted) {
-
-        Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-    }
-
-    } on FirebaseAuthException catch (e) {
-
-      String errorMessage = 'Erro ao fazer login.';
       
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Ocorreu um erro ao fazer login.';
       if (e.code == 'user-not-found') {
-        errorMessage = 'Usuário não encontrado.';
+        errorMessage = 'Nenhum usuário encontrado com este e-mail.';
       } else if (e.code == 'wrong-password') {
         errorMessage = 'Senha incorreta.';
       } else if (e.code == 'invalid-email') {
-        errorMessage = 'E-mail inválido.';
+        errorMessage = 'O formato do e-mail é inválido.';
+      } else if (e.code == 'invalid-credential') {
+        errorMessage = 'Credenciais inválidas. Verifique seu e-mail e senha.';
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showSnackBar(errorMessage);
+    } catch (e) {
+      _showSnackBar('Erro inesperado: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    
+    if (email.isEmpty) {
+      _showSnackBar('Digite seu e-mail no campo acima para recuperar a senha.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showSnackBar('E-mail de recuperação enviado!', isError: false);
+    } catch (e) {
+      _showSnackBar('Erro ao enviar e-mail de recuperação. Verifique se o e-mail está correto.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Entrar no Sistema')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Center( 
-          child: SingleChildScrollView( 
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
 
-                const Icon(Icons.local_parking, size: 100, color: Colors.blue),
-                const SizedBox(height: 20),
-                const Text(
-                  'Gestão de Estacionamentos',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.15),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.directions_car_filled_rounded,
+                    size: 80,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(height: 40),
 
-                TextField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'E-mail',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
+                const Text(
+                  'Gestão de\nEstacionamentos',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textLight,
+                    height: 1.2,
                   ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Acesse sua conta para continuar',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textLight.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 48),
+
+                _buildTextField(
+                  hintText: 'E-mail',
+                  icon: Icons.alternate_email_rounded,
+                  controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
 
-                TextField(
+                _buildTextField(
+                  hintText: 'Senha',
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
                   controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Senha',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
+                ),
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _resetPassword,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                    child: const Text('Esqueceu a senha?'),
                   ),
-                  obscureText: true,
                 ),
                 const SizedBox(height: 24),
 
-                SizedBox(
-                  width: double.infinity, 
-                  height: 50,
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.background,
+                    disabledBackgroundColor: AppColors.surface,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _loginUser,
-                          child: const Text('ENTRAR', style: TextStyle(fontSize: 18)),
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: AppColors.background,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Text(
+                          'ENTRAR',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
                         ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Não tem uma conta?'),
+                    Text(
+                      'Não tem uma conta?',
+                      style: TextStyle(color: AppColors.textLight.withOpacity(0.7)),
+                    ),
                     TextButton(
                       onPressed: () {
-
-                        Navigator.of(context).push(
+                        Navigator.push(
+                          context,
                           MaterialPageRoute(
                             builder: (context) => const RegistrationScreen(),
                           ),
                         );
                       },
-                      child: const Text('Cadastre-se'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryLight,
+                      ),
+                      child: const Text(
+                        'Cadastre-se',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String hintText,
+    required IconData icon,
+    bool isPassword = false,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surface, width: 2),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: AppColors.textLight, fontSize: 16),
+        cursorColor: AppColors.primary,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: AppColors.textMuted),
+          hintText: hintText,
+          hintStyle: TextStyle(color: AppColors.textMuted.withOpacity(0.5)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         ),
       ),
     );
