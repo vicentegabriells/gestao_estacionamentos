@@ -127,14 +127,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: const Icon(
                     Icons.directions_car_filled_rounded,
-                    size: 80,
+                    size: 50,
                     color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 40),
 
                 const Text(
-                  'Gestão de\nEstacionamentos',
+                  'PIGE',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
