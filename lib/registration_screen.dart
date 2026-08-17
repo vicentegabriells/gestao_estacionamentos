@@ -18,8 +18,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   
-  String _selectedUserType = 'motorista'; 
-  
+  String _selectedUserType = 'usuario'; 
+
   bool _isLoading = false;
 
   @override
@@ -70,7 +70,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -78,12 +77,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       await userCredential.user?.updateDisplayName(name);
 
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-        'name': name,
+      await FirebaseFirestore.instance.collection('usuarios').doc(userCredential.user!.uid).set({
+        'nome': name,
         'email': email,
-        'phone': phone,
-        'role': _selectedUserType, 
-        'createdAt': FieldValue.serverTimestamp(),
+        'celular': phone,
+        'tipoPerfil': _selectedUserType,
+        'dataCriacao': FieldValue.serverTimestamp(),
       });
       
       if (mounted) {
@@ -131,7 +130,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -152,7 +150,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 const Text(
                   'Criar Conta',
                   textAlign: TextAlign.center,
@@ -218,7 +215,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             style: const TextStyle(color: AppColors.textLight, fontSize: 16),
                             items: const [
                               DropdownMenuItem(
-                                value: 'motorista',
+                                value: 'usuario',
                                 child: Text('Sou Motorista'),
                               ),
                               DropdownMenuItem(
@@ -299,7 +296,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context); 
+                        Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primaryLight,
@@ -318,7 +315,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
     );
   }
-
 
   Widget _buildTextField({
     required String hintText,
