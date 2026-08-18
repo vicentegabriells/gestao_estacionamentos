@@ -3,7 +3,7 @@ class MapStyles {
   [
     {
       "elementType": "geometry",
-      "stylers": [{"color": "#0F251A"}]
+      "stylers": [{"color": "#0A1612"}]
     },
     {
       "elementType": "labels.text.fill",
@@ -11,7 +11,7 @@ class MapStyles {
     },
     {
       "elementType": "labels.text.stroke",
-      "stylers": [{"color": "#0F251A"}]
+      "stylers": [{"color": "#0A1612"}]
     },
     {
       "featureType": "administrative.locality",
@@ -26,42 +26,42 @@ class MapStyles {
     {
       "featureType": "poi.park",
       "elementType": "geometry",
-      "stylers": [{"color": "#132D21"}]
+      "stylers": [{"color": "#0E1F19"}]
     },
     {
       "featureType": "road",
       "elementType": "geometry",
-      "stylers": [{"color": "#1D4634"}]
+      "stylers": [{"color": "#132B22"}]
     },
     {
       "featureType": "road",
       "elementType": "geometry.stroke",
-      "stylers": [{"color": "#163628"}]
+      "stylers": [{"color": "#0A1612"}]
     },
     {
       "featureType": "road",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#89B5A1"}]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry",
+      "stylers": [{"color": "#193A2D"}]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry.stroke",
+      "stylers": [{"color": "#132B22"}]
+    },
+    {
+      "featureType": "road.highway",
       "elementType": "labels.text.fill",
       "stylers": [{"color": "#A1D4BD"}]
     },
     {
-      "featureType": "road.highway",
-      "elementType": "geometry",
-      "stylers": [{"color": "#275943"}]
-    },
-    {
-      "featureType": "road.highway",
-      "elementType": "geometry.stroke",
-      "stylers": [{"color": "#1D4634"}]
-    },
-    {
-      "featureType": "road.highway",
-      "elementType": "labels.text.fill",
-      "stylers": [{"color": "#C2E0D1"}]
-    },
-    {
       "featureType": "water",
       "elementType": "geometry",
-      "stylers": [{"color": "#163628"}]
+      "stylers": [{"color": "#0D1C16"}]
     },
     {
       "featureType": "water",
@@ -71,7 +71,7 @@ class MapStyles {
     {
       "featureType": "water",
       "elementType": "labels.text.stroke",
-      "stylers": [{"color": "#0F251A"}]
+      "stylers": [{"color": "#0A1612"}]
     },
     {
       "featureType": "transit",
