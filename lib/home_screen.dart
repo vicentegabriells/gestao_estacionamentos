@@ -3,10 +3,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart';
-import 'parking_details_screen.dart';
-import 'my_reservations_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'package:gestao_estacionamentos/constants/app_colors.dart'; 
+import 'package:gestao_estacionamentos/constants/map_styles.dart';
+import 'package:gestao_estacionamentos/login_screen.dart';
+import 'package:gestao_estacionamentos/parking_details_screen.dart';
+import 'package:gestao_estacionamentos/my_reservations_screen.dart';
+import 'package:gestao_estacionamentos/admin_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,14 +34,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: AppColors.surface,
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Mapa'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+          BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: 'Mapa'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Perfil'),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue[800],
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textMuted.withOpacity(0.5),
         onTap: _onItemTapped,
       ),
     );
@@ -64,9 +69,14 @@ class _MapTabState extends State<MapTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Localizar Vagas'), backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Localizar Vagas', style: TextStyle(fontWeight: FontWeight.bold)), 
+        backgroundColor: AppColors.surface, 
+        foregroundColor: AppColors.textLight,
+        elevation: 0,
+      ),
       body: StreamBuilder<QuerySnapshot>(
-        
         stream: FirebaseFirestore.instance.collection('estacionamentos').snapshots(),
         builder: (context, snapshot) {
           Set<Marker> markers = {};
@@ -103,6 +113,7 @@ class _MapTabState extends State<MapTab> {
           return GoogleMap(
             initialCameraPosition: _posicaoInicial,
             onMapCreated: (controller) {
+              controller.setMapStyle(MapStyles.darkTheme); 
               if (!_controller.isCompleted) {
                 _controller.complete(controller);
               }
@@ -147,21 +158,35 @@ class ProfileTab extends StatelessWidget {
     final User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return Center(
-        child: ElevatedButton(
-          onPressed: () => _signOut(context), 
-          child: const Text("Sessão expirada. Sair."),
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.background,
+            ),
+            onPressed: () => _signOut(context), 
+            child: const Text("Sessão expirada. Sair."),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Meu Perfil'), automaticallyImplyLeading: false),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Meu Perfil', style: TextStyle(fontWeight: FontWeight.bold)), 
+        automaticallyImplyLeading: false,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textLight,
+        elevation: 0,
+      ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('usuarios').doc(user.uid).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
 
           String nomeUsuario = user.displayName ?? 'Usuário';
@@ -181,20 +206,57 @@ class ProfileTab extends StatelessWidget {
           }
 
           return Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Center(child: CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50))),
-                const SizedBox(height: 20),
-                Text('Nome: $nomeUsuario', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text('E-mail: $emailUsuario'),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primary, width: 2),
+                    ),
+                    child: const Icon(Icons.person_rounded, size: 60, color: AppColors.primary),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Nome', style: TextStyle(color: AppColors.textMuted.withOpacity(0.7), fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Text(nomeUsuario, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textLight)),
+                      const Divider(color: AppColors.background, height: 24, thickness: 2),
+                      
+                      Text('E-mail', style: TextStyle(color: AppColors.textMuted.withOpacity(0.7), fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Text(emailUsuario, style: const TextStyle(fontSize: 16, color: AppColors.textLight)),
+                    ],
+                  ),
+                ),
                 
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: const EdgeInsets.only(top: 16.0),
                   child: Chip(
-                    label: Text(tipoPerfil.toUpperCase(), style: const TextStyle(color: Colors.white)),
-                    backgroundColor: tipoPerfil == 'admin' ? Colors.orange[800] : Colors.blue[400],
+                    label: Text(
+                      tipoPerfil.toUpperCase(), 
+                      style: TextStyle(
+                        color: tipoPerfil == 'admin' ? AppColors.textLight : AppColors.background,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    backgroundColor: tipoPerfil == 'admin' ? AppColors.primaryDarkest : AppColors.primary,
+                    side: BorderSide.none,
                   ),
                 ),
                 
@@ -202,11 +264,17 @@ class ProfileTab extends StatelessWidget {
 
                 SizedBox(
                   width: double.infinity,
+                  height: 56,
                   child: ElevatedButton.icon(
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MyReservationsScreen())),
-                    icon: const Icon(Icons.list_alt),
-                    label: const Text('Minhas Reservas'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
+                    icon: const Icon(Icons.list_alt_rounded),
+                    label: const Text('Minhas Reservas', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary, 
+                      foregroundColor: AppColors.background,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
                   ),
                 ),
 
@@ -215,11 +283,17 @@ class ProfileTab extends StatelessWidget {
                 if (tipoPerfil == 'admin')
                   SizedBox(
                     width: double.infinity,
+                    height: 56,
                     child: ElevatedButton.icon(
                       onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AdminDashboardScreen())),
-                      icon: const Icon(Icons.admin_panel_settings),
-                      label: const Text('Painel do Administrador'),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+                      icon: const Icon(Icons.admin_panel_settings_rounded),
+                      label: const Text('Painel do Administrador', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDarkest, 
+                        foregroundColor: AppColors.textLight,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
                     ),
                   ),
 
@@ -227,11 +301,15 @@ class ProfileTab extends StatelessWidget {
                 
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
+                  height: 56,
+                  child: OutlinedButton.icon(
                     onPressed: () => _signOut(context),
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Sair do Aplicativo'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                    icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                    label: const Text('Sair do Aplicativo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent, width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
                   ),
                 ),
               ],
