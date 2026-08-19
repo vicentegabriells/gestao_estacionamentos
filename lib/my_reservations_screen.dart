@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:gestao_estacionamentos/constants/app_colors.dart'; 
 import 'checkout_screen.dart'; 
 
 class MyReservationsScreen extends StatelessWidget {
@@ -10,11 +11,24 @@ class MyReservationsScreen extends StatelessWidget {
     bool? confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Cancelar Reserva"),
-        content: const Text("Tem certeza? A vaga será liberada imediatamente."),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Cancelar Reserva", style: TextStyle(color: AppColors.textLight, fontWeight: FontWeight.bold)),
+        content: const Text("Tem certeza? A vaga será liberada imediatamente.", style: TextStyle(color: AppColors.textMuted)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Não")),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Sim, Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), 
+            child: const Text("Não manter", style: TextStyle(color: AppColors.textMuted))
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text("Sim, Cancelar", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -27,9 +41,9 @@ class MyReservationsScreen extends StatelessWidget {
         'status': 'livre',
         'reservadaPor': FieldValue.delete(),
       });
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva cancelada.")));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva cancelada.", style: TextStyle(color: AppColors.background)), backgroundColor: AppColors.primary));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.redAccent));
     }
   }
 
@@ -72,7 +86,7 @@ class MyReservationsScreen extends StatelessWidget {
     final DateTime novoFim = DateTime(novaData.year, novaData.month, novaData.day, novaSaida.hour, novaSaida.minute);
 
     if (novoFim.isBefore(novoInicio)) { 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saída deve ser depois da entrada!"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("A saída deve ser depois da entrada!"), backgroundColor: Colors.redAccent));
       return;
     }
 
@@ -105,22 +119,22 @@ class MyReservationsScreen extends StatelessWidget {
       }
 
       if (temConflito) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Horário indisponível!"), backgroundColor: Colors.orange));
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Horário indisponível!"), backgroundColor: Colors.orangeAccent));
         return;
       }
 
       await FirebaseFirestore.instance.collection('reservas').doc(docReserva.id).update({
         'timestampInicio': Timestamp.fromDate(novoInicio),
         'timestampFim': Timestamp.fromDate(novoFim),
-        'agendamentoData': "${novaData.day}/${novaData.month}/${novaData.year}",
-        'agendamentoEntrada': "${novaEntrada.hour}:${novaEntrada.minute.toString().padLeft(2, '0')}",
-        'agendamentoSaida': "${novaSaida.hour}:${novaSaida.minute.toString().padLeft(2, '0')}",
+        'agendamentoData': "${novaData.day.toString().padLeft(2, '0')}/${novaData.month.toString().padLeft(2, '0')}/${novaData.year}",
+        'agendamentoEntrada': "${novaEntrada.hour.toString().padLeft(2, '0')}:${novaEntrada.minute.toString().padLeft(2, '0')}",
+        'agendamentoSaida': "${novaSaida.hour.toString().padLeft(2, '0')}:${novaSaida.minute.toString().padLeft(2, '0')}",
       });
 
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva atualizada!"), backgroundColor: Colors.green));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reserva atualizada!", style: TextStyle(color: AppColors.background, fontWeight: FontWeight.bold)), backgroundColor: AppColors.primary));
 
     } catch (e) { 
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.redAccent));
     }
   }
 
@@ -131,17 +145,20 @@ class MyReservationsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Minhas Reservas'),
-          backgroundColor: Colors.blueAccent,
-          foregroundColor: Colors.white,
+          title: const Text('Minhas Reservas', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.textLight,
+          elevation: 0,
           bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
+            indicatorColor: AppColors.primary,
+            indicatorWeight: 3,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textMuted,
             tabs: [
-              Tab(icon: Icon(Icons.event_available), text: "Pendentes"),
-              Tab(icon: Icon(Icons.history), text: "Histórico"),
+              Tab(icon: Icon(Icons.event_available_rounded), text: "Pendentes"),
+              Tab(icon: Icon(Icons.history_rounded), text: "Histórico"),
             ],
           ),
         ),
@@ -151,8 +168,8 @@ class MyReservationsScreen extends StatelessWidget {
               .where('usuarioId', isEqualTo: userId)
               .snapshots(),
           builder: (context, snapshot) {
-            if (snapshot.hasError) return Center(child: Text('Erro: ${snapshot.error}'));
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+            if (snapshot.hasError) return Center(child: Text('Erro: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)));
+            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
 
             var todasReservas = snapshot.data!.docs;
             List<DocumentSnapshot> listaAtivas = [];
@@ -213,11 +230,15 @@ class MyReservationsScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(permiteEdicao ? Icons.event_busy : Icons.history_toggle_off, size: 60, color: Colors.grey[300]),
-            const SizedBox(height: 10),
+            Icon(
+              permiteEdicao ? Icons.event_busy_rounded : Icons.history_toggle_off_rounded, 
+              size: 70, 
+              color: AppColors.textMuted.withOpacity(0.3)
+            ),
+            const SizedBox(height: 16),
             Text(
               permiteEdicao ? "Nenhuma reserva ativa." : "Histórico vazio.",
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 16, color: AppColors.textMuted.withOpacity(0.7), fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -226,7 +247,7 @@ class MyReservationsScreen extends StatelessWidget {
 
     return ListView.builder(
       itemCount: lista.length,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
         var reserva = lista[index];
         var dados = reserva.data() as Map<String, dynamic>;
@@ -238,58 +259,79 @@ class MyReservationsScreen extends StatelessWidget {
         String? horaEntrada = dados['agendamentoEntrada'];
         String? horaSaida = dados['agendamentoSaida'];
 
-        Color corIcone = Colors.green;
-        IconData icone = Icons.check_circle_outline;
+        Color corIcone = AppColors.primary;
+        IconData icone = Icons.check_circle_outline_rounded;
 
         if (status == 'cancelada') {
-          corIcone = Colors.red;
+          corIcone = Colors.redAccent;
           icone = Icons.cancel_outlined;
         } else if (status == 'ativa' && !permiteEdicao) {
-          corIcone = Colors.grey;
-          icone = Icons.access_time;
+          corIcone = AppColors.textMuted;
+          icone = Icons.access_time_rounded;
           status = "EXPIRADA";
         } else if (status == 'concluida') {
-          corIcone = Colors.grey;
-          icone = Icons.task_alt;
+          corIcone = AppColors.textMuted;
+          icone = Icons.task_alt_rounded;
         }
 
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: corIcone.withOpacity(0.1),
-                child: Icon(icone, color: corIcone),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: corIcone.withOpacity(0.2), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              title: Text(nomeEstacionamento, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  if (dataTexto != null)
-                    Text("$dataTexto • $horaEntrada até $horaSaida", style: const TextStyle(fontWeight: FontWeight.w500))
-                  else
-                    const Text("Reserva Imediata"),
-                  
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: corIcone.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                    child: Text(status.toUpperCase(), style: TextStyle(color: corIcone, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ],
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(6.0),
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: corIcone.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icone, color: corIcone, size: 28),
+              ),
+              title: Text(nomeEstacionamento, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textLight, fontSize: 16)),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (dataTexto != null)
+                      Text("📅 $dataTexto • ⏰ $horaEntrada até $horaSaida", style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500))
+                    else
+                      const Text("⚡ Reserva Imediata", style: TextStyle(color: AppColors.textMuted)),
+                    
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: corIcone.withOpacity(0.1), 
+                        borderRadius: BorderRadius.circular(6)
+                      ),
+                      child: Text(
+                        status.toUpperCase(), 
+                        style: TextStyle(color: corIcone, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                      ),
+                    ),
+                  ],
+                ),
               ),
              
               trailing: permiteEdicao
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        
                         IconButton(
-                          icon: const Icon(Icons.payments, color: Colors.green),
+                          icon: const Icon(Icons.payments_rounded, color: AppColors.primary),
                           onPressed: () {
                             Navigator.push(
                               context,
@@ -300,17 +342,13 @@ class MyReservationsScreen extends StatelessWidget {
                           },
                           tooltip: "Pagar agora",
                         ),
-                        
-                       
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                          icon: const Icon(Icons.edit_rounded, color: Colors.blueAccent),
                           onPressed: () => _editarReserva(context, reserva),
                           tooltip: "Editar",
                         ),
-                        
-                       
                         IconButton(
-                          icon: const Icon(Icons.cancel, color: Colors.redAccent),
+                          icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent),
                           onPressed: () => _cancelarReserva(context, reserva.id, dados['estacionamentoId'], dados['vagaId']),
                           tooltip: "Cancelar",
                         ),
