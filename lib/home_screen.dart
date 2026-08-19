@@ -149,8 +149,16 @@ class _MapTabState extends State<MapTab> {
                   }
                 },
                 markers: markers,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
+
+                zoomControlsEnabled: false,      
+                mapToolbarEnabled: false,        
+                compassEnabled: false,           
+                myLocationButtonEnabled: false,  
+                myLocationEnabled: true,         
+                
+                tiltGesturesEnabled: false, 
+                rotateGesturesEnabled: false,    
+
                 minMaxZoomPreference: const MinMaxZoomPreference(4.5, 20.0),
                 cameraTargetBounds: CameraTargetBounds(
                   LatLngBounds(
