@@ -63,6 +63,9 @@ class _MapTabState extends State<MapTab> {
   
   BitmapDescriptor? _customPin; 
 
+  Map<String, dynamic>? _estacionamentoSelecionado;
+  String? _idEstacionamentoSelecionado;
+
   static const CameraPosition _posicaoInicial = CameraPosition(
     target: LatLng(-10.916377, -37.670540), 
     zoom: 15.0,
@@ -80,9 +83,11 @@ class _MapTabState extends State<MapTab> {
       'lib/assets/pin_parking.png', 
     );
    
-    setState(() {
-      _customPin = icon;
-    });
+    if (mounted) {
+      setState(() {
+        _customPin = icon;
+      });
+    }
   }
 
   @override
@@ -109,47 +114,169 @@ class _MapTabState extends State<MapTab> {
                   Marker(
                     markerId: MarkerId(doc.id),
                     position: LatLng(p.latitude, p.longitude),
-                    
                     icon: _customPin ?? BitmapDescriptor.defaultMarker,
-                    
-                    infoWindow: InfoWindow(
-                      title: dados['nome'],
-                      snippet: "Toque para ver detalhes",
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => ParkingDetailsScreen(
-                              estacionamentoId: doc.id,
-                              dadosEstacionamento: dados,
-                            ),
+
+                    onTap: () async {
+                      final GoogleMapController controller = await _controller.future;
+                      controller.animateCamera(
+                        CameraUpdate.newCameraPosition(
+                          CameraPosition(
+                            target: LatLng(p.latitude - 0.002, p.longitude),
+                            zoom: 16.0,
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+
+                      setState(() {
+                        _idEstacionamentoSelecionado = doc.id;
+                        _estacionamentoSelecionado = dados;
+                      });
+                    },
                   ),
                 );
               }
             }
           }
 
-          return GoogleMap(
-            initialCameraPosition: _posicaoInicial,
-            onMapCreated: (controller) {
-              controller.setMapStyle(MapStyles.darkTheme); 
-              if (!_controller.isCompleted) {
-                _controller.complete(controller);
-              }
-            },
-            markers: markers,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            minMaxZoomPreference: const MinMaxZoomPreference(4.5, 20.0),
-            cameraTargetBounds: CameraTargetBounds(
-              LatLngBounds(
-                southwest: const LatLng(-85.0, -179.9),
-                northeast: const LatLng(85.0, 179.9),
+          return Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: _posicaoInicial,
+                onMapCreated: (controller) {
+                  controller.setMapStyle(MapStyles.darkTheme); 
+                  if (!_controller.isCompleted) {
+                    _controller.complete(controller);
+                  }
+                },
+                markers: markers,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                minMaxZoomPreference: const MinMaxZoomPreference(4.5, 20.0),
+                cameraTargetBounds: CameraTargetBounds(
+                  LatLngBounds(
+                    southwest: const LatLng(-85.0, -179.9),
+                    northeast: const LatLng(85.0, 179.9),
+                  ),
+                ),
+                onTap: (_) {
+                  if (_idEstacionamentoSelecionado != null) {
+                    setState(() {
+                      _idEstacionamentoSelecionado = null;
+                      _estacionamentoSelecionado = null;
+                    });
+                  }
+                },
               ),
-            ),
+
+              if (_idEstacionamentoSelecionado != null && _estacionamentoSelecionado != null)
+                Positioned(
+                  bottom: 24,
+                  left: 24,
+                  right: 24,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.local_parking_rounded, color: AppColors.primary, size: 28),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _estacionamentoSelecionado?['nome']?.toString() ?? 'Estacionamento',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                      maxLines: 1, 
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Toque para ver vagas e detalhes',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.black54),
+                                onPressed: () {
+                                  setState(() {
+                                    _idEstacionamentoSelecionado = null;
+                                    _estacionamentoSelecionado = null;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final id = _idEstacionamentoSelecionado!;
+                                final dados = _estacionamentoSelecionado!;
+                                
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ParkingDetailsScreen(
+                                      estacionamentoId: id,
+                                      dadosEstacionamento: dados,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.background,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'VER DETALHES',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
