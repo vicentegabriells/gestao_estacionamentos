@@ -294,7 +294,6 @@ class MyReservationsScreen extends StatelessWidget {
         
         String status = dados['status'] ?? 'ativa';
         String nomeEstacionamento = dados['nomeEstacionamento'] ?? 'Estacionamento';
-        String nomeVaga = dados['nomeVaga'] ?? 'Vaga';
         String? dataTexto = dados['agendamentoData'];
         String? horaEntrada = dados['agendamentoEntrada'];
         String? horaSaida = dados['agendamentoSaida'];
@@ -328,74 +327,108 @@ class MyReservationsScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(6.0),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: corIcone.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icone, color: corIcone, size: 28),
-              ),
-              title: Text(nomeEstacionamento, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textLight, fontSize: 16)),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Column(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (dataTexto != null)
-                      Text("📅 $dataTexto • ⏰ $horaEntrada até $horaSaida", style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500))
-                    else
-                      const Text("⚡ Reserva Imediata", style: TextStyle(color: AppColors.textMuted)),
-                    
-                    const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: corIcone.withOpacity(0.1), 
-                        borderRadius: BorderRadius.circular(6)
+                        color: corIcone.withOpacity(0.15),
+                        shape: BoxShape.circle,
                       ),
-                      child: Text(
-                        status.toUpperCase(), 
-                        style: TextStyle(color: corIcone, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                      child: Icon(icone, color: corIcone, size: 30),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nomeEstacionamento, 
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textLight, fontSize: 18, height: 1.2)
+                          ),
+                          const SizedBox(height: 12),
+                          if (dataTexto != null) ...[
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, color: AppColors.textMuted, size: 16),
+                                const SizedBox(width: 8),
+                                Text(dataTexto, style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500, fontSize: 15)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time_rounded, color: AppColors.textMuted, size: 16),
+                                const SizedBox(width: 8),
+                                Text("$horaEntrada até $horaSaida", style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500, fontSize: 15)),
+                              ],
+                            ),
+                          ] else
+                            const Text("⚡ Reserva Imediata", style: TextStyle(color: AppColors.textMuted, fontSize: 15)),
+                          
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: corIcone.withOpacity(0.1), 
+                              borderRadius: BorderRadius.circular(6)
+                            ),
+                            child: Text(
+                              status.toUpperCase(), 
+                              style: TextStyle(color: corIcone, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
              
-              trailing: permiteEdicao
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.payments_rounded, color: AppColors.primary),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CheckoutScreen(reserva: reserva),
-                              ),
-                            );
-                          },
-                          tooltip: "Pagar agora",
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_rounded, color: Colors.blueAccent),
-                          onPressed: () => _editarReserva(context, reserva),
-                          tooltip: "Editar",
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent),
-                          onPressed: () => _cancelarReserva(context, reserva.id, dados['estacionamentoId'], dados['vagaId']),
-                          tooltip: "Cancelar",
-                        ),
-                      ],
-                    )
-                  : null,
-            ),
+              if (permiteEdicao) ...[
+                const Divider(color: AppColors.background, thickness: 2, height: 1),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.background.withOpacity(0.4),
+                    borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.payments_rounded, color: AppColors.primary, size: 20),
+                        label: const Text("Pagar", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => CheckoutScreen(reserva: reserva)),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      TextButton.icon(
+                        icon: const Icon(Icons.edit_rounded, color: Colors.blueAccent, size: 20),
+                        label: const Text("Editar", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                        onPressed: () => _editarReserva(context, reserva),
+                      ),
+                      const SizedBox(width: 4),
+                      TextButton.icon(
+                        icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 20),
+                        label: const Text("Cancelar", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                        onPressed: () => _cancelarReserva(context, reserva.id, dados['estacionamentoId'], dados['vagaId']),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
         );
       },
