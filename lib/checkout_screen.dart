@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:gestao_estacionamentos/constants/app_colors.dart'; 
 
 class CheckoutScreen extends StatefulWidget {
   final DocumentSnapshot reserva;
@@ -95,7 +96,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _processarPagamento() async {
-
     if (!_podePagar) return;
 
     setState(() => _carregando = true);
@@ -125,12 +125,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pagamento confirmado!"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pagamento confirmado!", style: TextStyle(color: AppColors.background, fontWeight: FontWeight.bold)), backgroundColor: AppColors.primary));
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.redAccent));
         setState(() => _carregando = false);
       }
     }
@@ -141,66 +141,119 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     double total = _valorEstadia + _valorMultas;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Checkout"), backgroundColor: Colors.blue[800], foregroundColor: Colors.white),
-      body: _carregando ? const Center(child: CircularProgressIndicator()) : Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Resumo da Conta", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ListTile(title: const Text("Estadia (Tempo de uso)"), trailing: Text("R\$ ${_valorEstadia.toStringAsFixed(2)}")),
-            
-            if (_valorMultas > 0) ...[
-              const Divider(),
-              const Text("Infrações Pendentes", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              ..._listaMultas.map((m) => ListTile(
-                title: Text(m['motivo'], style: const TextStyle(color: Colors.red)),
-                trailing: Text("R\$ ${m['valor'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.red)),
-              )),
-            ],
-            
-            const Divider(),
-            ListTile(
-              title: const Text("TOTAL A PAGAR", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-              trailing: Text("R\$ ${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green)),
-            ),
-            
-            const Spacer(),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text("Checkout", style: TextStyle(fontWeight: FontWeight.bold)), 
+        backgroundColor: AppColors.background, 
+        foregroundColor: AppColors.textLight,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: _carregando 
+        ? const Center(child: CircularProgressIndicator(color: AppColors.primary)) 
+        : Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Resumo da Conta", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textLight)),
+                const SizedBox(height: 16),
+                
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.surface, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Estadia (Tempo de uso)", style: TextStyle(color: AppColors.textMuted.withOpacity(0.9), fontSize: 16)),
+                          Text("R\$ ${_valorEstadia.toStringAsFixed(2)}", style: const TextStyle(color: AppColors.textLight, fontSize: 16, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      
+                      if (_valorMultas > 0) ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Divider(color: AppColors.background, thickness: 2),
+                        ),
+                        const Text("Infrações Pendentes", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        ..._listaMultas.map((m) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: Text(m['motivo'], style: const TextStyle(color: Colors.redAccent, fontSize: 15))),
+                              Text("R\$ ${m['valor'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 15)),
+                            ],
+                          ),
+                        )),
+                      ],
+                      
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Divider(color: AppColors.background, thickness: 2),
+                      ),
+                      
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("TOTAL A PAGAR", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textLight)),
+                          Text("R\$ ${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.primary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const Spacer(),
 
-            if (_podePagar)
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _processarPagamento,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: const Text("CONFIRMAR PAGAMENTO", style: TextStyle(color: Colors.white, fontSize: 16)),
-                ),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  border: Border.all(color: Colors.orange),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.orange),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "O pagamento só será liberado a partir de:\n${DateFormat("dd/MM/yyyy 'às' HH:mm").format(_dataInicio)}",
-                        style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
+                if (_podePagar)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _processarPagamento,
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      label: const Text("CONFIRMAR PAGAMENTO", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.background,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
                       ),
                     ),
-                  ],
-                ),
-              )
-          ],
-        ),
-      ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.orangeAccent.withOpacity(0.1),
+                      border: Border.all(color: Colors.orangeAccent.withOpacity(0.5), width: 1.5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, color: Colors.orangeAccent, size: 28),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            "O pagamento será liberado a partir de:\n${DateFormat("dd/MM/yyyy 'às' HH:mm").format(_dataInicio)}",
+                            style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+              ],
+            ),
+          ),
     );
   }
 }
