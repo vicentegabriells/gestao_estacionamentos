@@ -50,6 +50,20 @@ class ParkingDetailsScreen extends StatelessWidget {
       firstDate: agora,
       lastDate: agora.add(const Duration(days: 30)),
       helpText: "DATA DA RESERVA",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.grey[400]!,
+              onPrimary: Colors.black, 
+              surface: Colors.grey[900]!,
+              onSurface: Colors.white, 
+            ),
+            dialogBackgroundColor: Colors.grey[900],
+          ),
+          child: child!,
+        );
+      },
     );
     if (dataSelecionada == null || !context.mounted) return;
 
@@ -57,6 +71,19 @@ class ParkingDetailsScreen extends StatelessWidget {
       context: context,
       initialTime: TimeOfDay.now(),
       helpText: "HORÁRIO DE CHEGADA",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.grey[400]!,
+              onPrimary: Colors.black,
+              surface: Colors.grey[900]!,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (horaEntrada == null || !context.mounted) return;
 
@@ -64,6 +91,19 @@ class ParkingDetailsScreen extends StatelessWidget {
       context: context,
       initialTime: TimeOfDay(hour: horaEntrada.hour + 1, minute: horaEntrada.minute),
       helpText: "HORÁRIO DE SAÍDA",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.grey[400]!,
+              onPrimary: Colors.black,
+              surface: Colors.grey[900]!,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (horaSaida == null || !context.mounted) return;
 

@@ -65,6 +65,20 @@ class MyReservationsScreen extends StatelessWidget {
       firstDate: agora,
       lastDate: agora.add(const Duration(days: 30)),
       helpText: "EDITAR DATA",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.grey[400]!,
+              onPrimary: Colors.black,
+              surface: Colors.grey[900]!,
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: Colors.grey[900],
+          ),
+          child: child!,
+        );
+      },
     );
     if (novaData == null || !context.mounted) return; 
 
@@ -72,6 +86,19 @@ class MyReservationsScreen extends StatelessWidget {
       context: context,
       initialTime: entradaAtual,
       helpText: "NOVA CHEGADA",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.grey[400]!,
+              onPrimary: Colors.black,
+              surface: Colors.grey[900]!,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (novaEntrada == null || !context.mounted) return;
 
@@ -79,6 +106,19 @@ class MyReservationsScreen extends StatelessWidget {
       context: context,
       initialTime: saidaAtual,
       helpText: "NOVA SAÍDA",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.grey[400]!,
+              onPrimary: Colors.black,
+              surface: Colors.grey[900]!,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (novaSaida == null || !context.mounted) return;
 
