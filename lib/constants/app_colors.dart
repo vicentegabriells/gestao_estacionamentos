@@ -16,4 +16,10 @@ class AppColors {
   static const Color textLight = Color(0xFFeafaf4);
   static const Color textMuted = Color(0xFF98e6c7);
   static const Color textLightest = Color(0xFFc1f0dd);
-}
+
+  static const Color adminBackground = Color(0xFF081C15); 
+  static const Color adminHeader = Color(0xFF1D3557);  
+  static const Color adminCard = Color(0xFF264653);   
+  static const Color adminPrimary = Color(0xFF2A9D8F);  
+  static const Color adminAccent = Color(0xFF0FA3B1);  
+  static const Color adminText = Color(0xFFF1FAEE);      
