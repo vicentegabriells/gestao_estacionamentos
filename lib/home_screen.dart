@@ -186,8 +186,9 @@ class _MapTabState extends State<MapTab> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.3),
@@ -204,7 +205,7 @@ class _MapTabState extends State<MapTab> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: AppColors.primary.withOpacity(0.15),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.local_parking_rounded, color: AppColors.primary, size: 28),
@@ -219,24 +220,25 @@ class _MapTabState extends State<MapTab> {
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
+                                        color: AppColors.textLight,
+                                        height: 1.2,
                                       ),
-                                      maxLines: 1, 
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 6),
                                     Text(
                                       'Toque para ver vagas e detalhes',
                                       style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
+                                        fontSize: 13,
+                                        color: AppColors.textMuted.withOpacity(0.8),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close_rounded, color: Colors.black54),
+                                icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
                                 onPressed: () {
                                   setState(() {
                                     _idEstacionamentoSelecionado = null;
