@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:gestao_estacionamentos/constants/app_colors.dart';
+import 'package:gestao_estacionamentos/constants/map_styles.dart'; 
 
 class AdminAddParkingScreen extends StatefulWidget {
   const AdminAddParkingScreen({super.key});
@@ -24,7 +26,7 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
 
     if (_localizacaoSelecionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Por favor, selecione a localização no mapa!"), backgroundColor: Colors.red),
+        const SnackBar(content: Text("Por favor, selecione a localização no mapa!", style: TextStyle(color: AppColors.adminText)), backgroundColor: Colors.redAccent),
       );
       return;
     }
@@ -46,14 +48,14 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Estacionamento criado com sucesso!"), backgroundColor: Colors.green),
+          const SnackBar(content: Text("Estacionamento criado com sucesso!", style: TextStyle(color: AppColors.adminBackground, fontWeight: FontWeight.bold)), backgroundColor: AppColors.adminAccent),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao criar: $e"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Erro ao criar: $e", style: const TextStyle(color: AppColors.adminText)), backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -74,95 +76,138 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
     }
   }
 
+  InputDecoration _buildInputDecoration(String label, {String? prefixText}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.adminAccent),
+      prefixText: prefixText,
+      prefixStyle: const TextStyle(color: AppColors.adminText, fontWeight: FontWeight.bold),
+      filled: true,
+      fillColor: AppColors.adminCard,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.adminAccent, width: 2),
+      ),
+      errorStyle: const TextStyle(color: Colors.redAccent),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.adminBackground, 
       appBar: AppBar(
-        title: const Text("Novo Estacionamento"),
-        backgroundColor: Colors.orange[800],
-        foregroundColor: Colors.white,
+        title: const Text("Novo Estacionamento", style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.adminHeader,
+        foregroundColor: AppColors.adminText,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Dados do Estabelecimento", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 15),
+              const Text("Dados do Estabelecimento", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.adminText)),
+              const SizedBox(height: 16),
               
               TextFormField(
                 controller: _nomeController,
-                decoration: const InputDecoration(labelText: "Nome do Estacionamento", border: OutlineInputBorder()),
+                style: const TextStyle(color: AppColors.adminText),
+                decoration: _buildInputDecoration("Nome do Estacionamento"),
                 validator: (v) => v!.isEmpty ? "Campo obrigatório" : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               
               TextFormField(
                 controller: _enderecoController,
-                decoration: const InputDecoration(labelText: "Endereço Completo", border: OutlineInputBorder()),
+                style: const TextStyle(color: AppColors.adminText),
+                decoration: _buildInputDecoration("Endereço Completo"),
                 validator: (v) => v!.isEmpty ? "Campo obrigatório" : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
               TextFormField(
                 controller: _precoController,
+                style: const TextStyle(color: AppColors.adminText),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: "Preço por Hora (R\$)", prefixText: "R\$ ", border: OutlineInputBorder()),
+                decoration: _buildInputDecoration("Preço por Hora (R\$)", prefixText: "R\$ "),
                 validator: (v) => v!.isEmpty ? "Campo obrigatório" : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
 
-              const Text("Localização no Mapa", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
+              const Text("Localização no Mapa", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.adminText)),
+              const SizedBox(height: 16),
               
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.adminCard,
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   children: [
                     if (_localizacaoSelecionada != null) ...[
-                      const Icon(Icons.location_on, color: Colors.green, size: 40),
+                      const Icon(Icons.location_on_rounded, color: AppColors.adminAccent, size: 48),
+                      const SizedBox(height: 8),
                       Text(
                         "Lat: ${_localizacaoSelecionada!.latitude.toStringAsFixed(4)}\nLng: ${_localizacaoSelecionada!.longitude.toStringAsFixed(4)}",
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.adminText, height: 1.4),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                     ] else ...[
-                      const Icon(Icons.map, color: Colors.grey, size: 40),
-                      const Text("Nenhuma localização definida"),
-                      const SizedBox(height: 10),
+                      Icon(Icons.map_rounded, color: AppColors.adminAccent.withOpacity(0.5), size: 48),
+                      const SizedBox(height: 8),
+                      Text("Nenhuma localização definida", style: TextStyle(color: AppColors.adminAccent.withOpacity(0.7))),
+                      const SizedBox(height: 16),
                     ],
                     
-                    ElevatedButton.icon(
-                      onPressed: _abrirMapaSelecao,
-                      icon: const Icon(Icons.edit_location_alt),
-                      label: Text(_localizacaoSelecionada == null ? "Marcar no Mapa" : "Alterar Localização"),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _abrirMapaSelecao,
+                        icon: const Icon(Icons.edit_location_alt_rounded),
+                        label: Text(_localizacaoSelecionada == null ? "Marcar no Mapa" : "Alterar Localização", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.adminPrimary, 
+                          foregroundColor: AppColors.adminText,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
 
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 56,
                 child: _isLoading 
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.adminAccent))
+                  : ElevatedButton.icon(
                       onPressed: _cadastrarEstacionamento,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800]),
-                      child: const Text("CRIAR ESTACIONAMENTO", style: TextStyle(color: Colors.white, fontSize: 16)),
+                      icon: const Icon(Icons.check_circle_outline_rounded, color: AppColors.adminBackground),
+                      label: const Text("CRIAR ESTACIONAMENTO", style: TextStyle(color: AppColors.adminBackground, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.adminAccent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 4,
+                      ),
                     ),
               ),
+              const SizedBox(height: 20), 
             ],
           ),
         ),
@@ -171,7 +216,6 @@ class _AdminAddParkingScreenState extends State<AdminAddParkingScreen> {
   }
 }
 
-// --- TELA DE MAPA ---
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
 
@@ -180,7 +224,6 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  // --- ATUALIZAÇÃO: NOVAS COORDENADAS ---
   static const LatLng _center = LatLng(-10.916377, -37.670540); 
   LatLng? _pickedLocation;
 
@@ -193,11 +236,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.adminBackground,
       appBar: AppBar(
-        title: const Text("Toque para marcar"),
+        title: const Text("Toque para marcar", style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.adminHeader,
+        foregroundColor: AppColors.adminText,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.check),
+            icon: const Icon(Icons.check_rounded),
             onPressed: _pickedLocation == null 
               ? null 
               : () => Navigator.pop(context, _pickedLocation),
@@ -209,44 +256,74 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           GoogleMap(
             initialCameraPosition: const CameraPosition(
               target: _center,
-              zoom: 15.0, // Zoom ajustado
+              zoom: 15.0, 
             ),
+            onMapCreated: (controller) {
+              controller.setMapStyle(MapStyles.adminTheme);
+            },
             onTap: _onMapTap,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
             markers: _pickedLocation == null 
               ? {} 
               : {
                   Marker(
                     markerId: const MarkerId('picked'),
                     position: _pickedLocation!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
                   ),
                 },
           ),
           if (_pickedLocation != null)
             Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context, _pickedLocation),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.all(15),
+              bottom: 30,
+              left: 24,
+              right: 24,
+              child: SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, _pickedLocation),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.adminAccent,
+                    foregroundColor: AppColors.adminBackground,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 4,
+                  ),
+                  child: const Text("CONFIRMAR LOCALIZAÇÃO", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.0)),
                 ),
-                child: const Text("CONFIRMAR LOCALIZAÇÃO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           if (_pickedLocation == null)
             Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
+              top: 20,
+              left: 24,
+              right: 24,
               child: Container(
-                color: Colors.black54,
-                padding: const EdgeInsets.all(8),
-                child: const Text(
-                  "Toque no mapa para definir a posição",
-                  style: TextStyle(color: Colors.white),
-                  textAlign: TextAlign.center,
+                decoration: BoxDecoration(
+                  color: AppColors.adminCard.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.touch_app_rounded, color: AppColors.adminAccent, size: 24),
+                    SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        "Toque no mapa para definir a posição",
+                        style: TextStyle(color: AppColors.adminText, fontWeight: FontWeight.w600, fontSize: 15),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
